@@ -1,11 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
 import '../../data/sample_data.dart';
+import '../auth/auth_error_message.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key, required this.email, required this.onLogout});
+
+  final String email;
+  final Future<void> Function() onLogout;
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _isLoggingOut = false;
+
+  Future<void> _logout() async {
+    setState(() => _isLoggingOut = true);
+    try {
+      await widget.onLogout();
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(authErrorMessage(error))));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoggingOut = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,11 +76,11 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'Miniature Painter',
+                  widget.email,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 5),
-                const Text('Hobbyist painter'),
+                const Text('Signed in'),
                 const SizedBox(height: 22),
                 Row(
                   children: [
@@ -83,6 +109,26 @@ class ProfileScreen extends StatelessWidget {
           const _ProfileOption(
             icon: Icons.info_outline,
             label: 'About Paintbench',
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: _isLoggingOut ? null : _logout,
+            icon: _isLoggingOut
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppTheme.accent,
+                    ),
+                  )
+                : const Icon(Icons.logout),
+            label: Text(_isLoggingOut ? 'Signing out...' : 'Sign out'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.accent,
+              side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.5)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
           ),
           const SizedBox(height: 12),
           const Center(

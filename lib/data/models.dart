@@ -4,6 +4,7 @@ enum ProjectStatus { inProgress, planned, completed }
 
 class PaintingProject {
   const PaintingProject({
+    this.id,
     required this.name,
     required this.subject,
     required this.progress,
@@ -12,12 +13,68 @@ class PaintingProject {
     required this.colors,
   });
 
+  final String? id;
   final String name;
   final String subject;
   final double progress;
   final ProjectStatus status;
   final IconData icon;
   final List<Color> colors;
+
+  factory PaintingProject.fromMap(Map<String, dynamic> map) {
+    final status = switch (map['status']) {
+      'in_progress' => ProjectStatus.inProgress,
+      'completed' => ProjectStatus.completed,
+      _ => ProjectStatus.planned,
+    };
+    final progressValue = map['progress'];
+    final progress = progressValue is num
+        ? progressValue.toDouble().clamp(0.0, 1.0)
+        : 0.0;
+
+    return PaintingProject(
+      id: map['id'] as String?,
+      name: map['name'] as String? ?? 'Untitled project',
+      subject: map['subject'] as String? ?? '',
+      progress: progress,
+      status: status,
+      icon: _projectIcon(status),
+      colors: _projectColors(status),
+    );
+  }
+
+  Map<String, dynamic> toInsertMap({required String userId}) => {
+    'user_id': userId,
+    'name': name,
+    'subject': subject,
+    'status': _statusToDatabase(status),
+    'progress': progress,
+  };
+
+  Map<String, dynamic> toUpdateMap() => {
+    'name': name,
+    'subject': subject,
+    'status': _statusToDatabase(status),
+    'progress': progress,
+  };
+
+  static String _statusToDatabase(ProjectStatus status) => switch (status) {
+    ProjectStatus.planned => 'planned',
+    ProjectStatus.inProgress => 'in_progress',
+    ProjectStatus.completed => 'completed',
+  };
+
+  static IconData _projectIcon(ProjectStatus status) => switch (status) {
+    ProjectStatus.planned => Icons.nightlight_outlined,
+    ProjectStatus.inProgress => Icons.shield_outlined,
+    ProjectStatus.completed => Icons.whatshot_outlined,
+  };
+
+  static List<Color> _projectColors(ProjectStatus status) => switch (status) {
+    ProjectStatus.planned => const [Color(0xFF6D687D), Color(0xFF302D3D)],
+    ProjectStatus.inProgress => const [Color(0xFF40536B), Color(0xFF202A38)],
+    ProjectStatus.completed => const [Color(0xFF9B7041), Color(0xFF493324)],
+  };
 }
 
 enum PaintStatus { owned, wanted, missing }
