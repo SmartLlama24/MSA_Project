@@ -54,7 +54,6 @@ class SupabasePaintRepository implements PaintRepository {
         .select('id, name, paint_type, hex_color, user_paints(status)')
         .eq('brand_id', brandId)
         .eq('user_paints.user_id', userId)
-        .order('hex_color', ascending: true, nullsFirst: false)
         .order('name');
     return rows.map(CatalogPaint.fromMap).toList();
   }

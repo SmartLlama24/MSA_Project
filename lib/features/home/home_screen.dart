@@ -2,22 +2,60 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
-import '../../data/sample_data.dart';
+import '../projects/project_repository.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.onNavigate,
     required this.onCreateProject,
+    required this.onOpenProject,
+    required this.projectRepository,
   });
 
   final ValueChanged<int> onNavigate;
   final VoidCallback onCreateProject;
+  final ValueChanged<PaintingProject> onOpenProject;
+  final ProjectRepository projectRepository;
+
+  @override
+  State<HomeScreen> createState() => HomeScreenState();
+}
+
+class HomeScreenState extends State<HomeScreen> {
+  List<PaintingProject> _recentProjects = [];
+  bool _isLoadingProjects = true;
+  String? _projectsError;
+
+  @override
+  void initState() {
+    super.initState();
+    loadRecentProjects();
+  }
+
+  Future<void> loadRecentProjects() async {
+    setState(() {
+      _isLoadingProjects = true;
+      _projectsError = null;
+    });
+    try {
+      final projects = await widget.projectRepository.getRecentProjects();
+      if (!mounted) return;
+      setState(() {
+        _recentProjects = projects;
+        _isLoadingProjects = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _projectsError = projectErrorMessage(error);
+        _isLoadingProjects = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final recentProjects = sampleProjects.take(2).toList();
-
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
@@ -60,7 +98,7 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          _WorkshopCard(onCreateProject: onCreateProject),
+          _WorkshopCard(onCreateProject: widget.onCreateProject),
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -70,26 +108,80 @@ class HomeScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               TextButton(
-                onPressed: () => onNavigate(1),
+                onPressed: () => widget.onNavigate(1),
                 child: const Text('See all'),
               ),
             ],
           ),
           const SizedBox(height: 8),
-          for (final project in recentProjects) ...[
-            ProjectPreviewCard(project: project),
-            const SizedBox(height: 12),
-          ],
+          ..._buildRecentProjects(context),
           const SizedBox(height: 14),
           _QuickAction(
             icon: Icons.palette_outlined,
             title: 'Browse your paints',
             subtitle: 'Check your collection and wishlist',
-            onTap: () => onNavigate(2),
+            onTap: () => widget.onNavigate(2),
           ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildRecentProjects(BuildContext context) {
+    if (_isLoadingProjects) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: Center(
+            child: CircularProgressIndicator(color: AppTheme.accent),
+          ),
+        ),
+      ];
+    }
+
+    if (_projectsError != null) {
+      return [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            children: [
+              Text(
+                _projectsError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.mutedText),
+              ),
+              TextButton.icon(
+                onPressed: loadRecentProjects,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try again'),
+              ),
+            ],
+          ),
+        ),
+      ];
+    }
+
+    if (_recentProjects.isEmpty) {
+      return const [
+        Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            'Your recent projects will appear here.',
+            style: TextStyle(color: AppTheme.mutedText),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      for (final project in _recentProjects) ...[
+        ProjectPreviewCard(
+          project: project,
+          onTap: () => widget.onOpenProject(project),
+        ),
+        const SizedBox(height: 12),
+      ],
+    ];
   }
 }
 
@@ -154,74 +246,86 @@ class _WorkshopCard extends StatelessWidget {
 }
 
 class ProjectPreviewCard extends StatelessWidget {
-  const ProjectPreviewCard({super.key, required this.project});
+  const ProjectPreviewCard({
+    super.key,
+    required this.project,
+    required this.onTap,
+  });
 
   final PaintingProject project;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final progress = project.progress;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: project.colors,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(project.icon, color: Colors.white, size: 27),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  project.name,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  project.subject,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppTheme.mutedText),
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 5,
-                    backgroundColor: AppTheme.elevatedSurface,
-                    color: AppTheme.accent,
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: project.colors,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-              ],
-            ),
+                child: Icon(project.icon, color: Colors.white, size: 27),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      project.subject,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: AppTheme.mutedText),
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 5,
+                        backgroundColor: AppTheme.elevatedSurface,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${(progress * 100).round()}%',
+                style: const TextStyle(
+                  color: AppTheme.accent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Text(
-            '${(progress * 100).round()}%',
-            style: const TextStyle(
-              color: AppTheme.accent,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -104,7 +104,7 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
           paint.userStatus == PaintOwnershipStatus.unowned,
       };
       return matchesSearch && matchesFilter;
-    }).toList()..sort(_comparePaintHexColors);
+    }).toList()..sort(_comparePaintColors);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.brand.name)),
@@ -147,17 +147,49 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
     );
   }
 
-  int _comparePaintHexColors(CatalogPaint first, CatalogPaint second) {
-    final firstHex = first.hexColor?.trim().replaceFirst('#', '').toUpperCase();
-    final secondHex = second.hexColor
-        ?.trim()
-        .replaceFirst('#', '')
-        .toUpperCase();
-    if (firstHex == null || firstHex.isEmpty) {
-      return secondHex == null || secondHex.isEmpty ? 0 : 1;
+  int _comparePaintColors(CatalogPaint first, CatalogPaint second) {
+    final firstColor = _PaintColorSortKey.fromHex(first.hexColor);
+    final secondColor = _PaintColorSortKey.fromHex(second.hexColor);
+
+    if (firstColor == null || secondColor == null) {
+      if (firstColor == null && secondColor != null) return 1;
+      if (firstColor != null && secondColor == null) return -1;
+      return first.name.compareTo(second.name);
     }
-    if (secondHex == null || secondHex.isEmpty) return -1;
-    return firstHex.compareTo(secondHex);
+
+    final categoryComparison = firstColor.category.index.compareTo(
+      secondColor.category.index,
+    );
+    if (categoryComparison != 0) return categoryComparison;
+
+    if (firstColor.category == _PaintColorCategory.neutral) {
+      final brightnessComparison = firstColor.value.compareTo(
+        secondColor.value,
+      );
+      if (brightnessComparison != 0) return brightnessComparison;
+      final saturationComparison = firstColor.saturation.compareTo(
+        secondColor.saturation,
+      );
+      if (saturationComparison != 0) return saturationComparison;
+      return first.name.compareTo(second.name);
+    }
+
+    final hueBucketComparison = firstColor.hueBucket.compareTo(
+      secondColor.hueBucket,
+    );
+    if (hueBucketComparison != 0) return hueBucketComparison;
+
+    final saturationComparison = secondColor.saturation.compareTo(
+      firstColor.saturation,
+    );
+    if (saturationComparison != 0) return saturationComparison;
+
+    final brightnessComparison = firstColor.value.compareTo(secondColor.value);
+    if (brightnessComparison != 0) return brightnessComparison;
+
+    final hueComparison = firstColor.hue.compareTo(secondColor.hue);
+    if (hueComparison != 0) return hueComparison;
+    return first.name.compareTo(second.name);
   }
 
   Widget _buildFilters() {
@@ -361,6 +393,60 @@ class _PaintTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+enum _PaintColorCategory { chromatic, neutral }
+
+class _PaintColorSortKey {
+  const _PaintColorSortKey({
+    required this.category,
+    required this.hue,
+    required this.saturation,
+    required this.value,
+  });
+
+  final _PaintColorCategory category;
+  final double hue;
+  final double saturation;
+  final double value;
+
+  int get hueBucket => ((hue + 30) % 360 / 12).floor();
+
+  static _PaintColorSortKey? fromHex(String? value) {
+    final hex = value?.trim().replaceFirst('#', '');
+    if (hex == null || !RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(hex)) {
+      return null;
+    }
+
+    final red = int.parse(hex.substring(0, 2), radix: 16) / 255;
+    final green = int.parse(hex.substring(2, 4), radix: 16) / 255;
+    final blue = int.parse(hex.substring(4, 6), radix: 16) / 255;
+    final maximum = [red, green, blue].reduce((a, b) => a > b ? a : b);
+    final minimum = [red, green, blue].reduce((a, b) => a < b ? a : b);
+    final delta = maximum - minimum;
+
+    var hue = 0.0;
+    if (delta != 0) {
+      if (maximum == red) {
+        hue = 60 * (((green - blue) / delta) % 6);
+      } else if (maximum == green) {
+        hue = 60 * ((blue - red) / delta + 2);
+      } else {
+        hue = 60 * ((red - green) / delta + 4);
+      }
+      if (hue < 0) hue += 360;
+    }
+
+    final saturation = maximum == 0 ? 0.0 : delta / maximum;
+    return _PaintColorSortKey(
+      category: saturation < 0.12
+          ? _PaintColorCategory.neutral
+          : _PaintColorCategory.chromatic,
+      hue: hue,
+      saturation: saturation,
+      value: maximum,
     );
   }
 }

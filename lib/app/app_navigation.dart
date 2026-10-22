@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/models.dart';
 import '../features/home/home_screen.dart';
 import '../features/paints/paints_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/paints/paint_repository.dart';
+import '../features/projects/project_details_screen.dart';
 import '../features/projects/project_repository.dart';
 import '../features/projects/projects_screen.dart';
 
@@ -27,7 +30,17 @@ class AppNavigation extends StatefulWidget {
 
 class _AppNavigationState extends State<AppNavigation> {
   int _selectedIndex = 0;
+  late final ProjectRepository _projectRepository;
+  final _homeKey = GlobalKey<HomeScreenState>();
   final _projectsKey = GlobalKey<ProjectsScreenState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _projectRepository =
+        widget.projectRepository ??
+        SupabaseProjectRepository(Supabase.instance.client);
+  }
 
   void _selectTab(int index) {
     setState(() => _selectedIndex = index);
@@ -40,11 +53,29 @@ class _AppNavigationState extends State<AppNavigation> {
     });
   }
 
+  Future<void> _openProjectDetails(PaintingProject project) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ProjectDetailsScreen(
+          project: project,
+          repository: _projectRepository,
+        ),
+      ),
+    );
+    if (mounted) await _homeKey.currentState?.loadRecentProjects();
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
-      HomeScreen(onNavigate: _selectTab, onCreateProject: _openCreateProject),
-      ProjectsScreen(key: _projectsKey, repository: widget.projectRepository),
+      HomeScreen(
+        key: _homeKey,
+        onNavigate: _selectTab,
+        onCreateProject: _openCreateProject,
+        onOpenProject: _openProjectDetails,
+        projectRepository: _projectRepository,
+      ),
+      ProjectsScreen(key: _projectsKey, repository: _projectRepository),
       PaintsScreen(repository: widget.paintRepository),
       ProfileScreen(email: widget.email, onLogout: widget.onLogout),
     ];

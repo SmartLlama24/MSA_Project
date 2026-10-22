@@ -93,6 +93,49 @@ void main() {
     expect(find.text('Create project'), findsNWidgets(2));
   });
 
+  testWidgets('home shows two recent projects and opens their details', (
+    WidgetTester tester,
+  ) async {
+    final projects = [
+      ...sampleProjects.asMap().entries.map(
+        (entry) => PaintingProject(
+          id: 'recent-${entry.key}',
+          name: entry.value.name,
+          subject: entry.value.subject,
+          progress: entry.value.progress,
+          status: entry.value.status,
+          icon: entry.value.icon,
+          colors: entry.value.colors,
+        ),
+      ),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: AppNavigation(
+          email: 'painter@example.com',
+          onLogout: () async {},
+          projectRepository: _FakeProjectRepository(projects: projects),
+          paintRepository: _FakePaintRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('The Ashen Knight'), findsOneWidget);
+    expect(find.text('Mossback Guardian'), findsOneWidget);
+    expect(find.text('The Gilded Wyrm'), findsNothing);
+
+    await tester.tap(find.text('The Ashen Knight'));
+    await tester.pumpAndSettle();
+    expect(find.text('Painting steps'), findsOneWidget);
+    expect(find.text('Painting steps'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('The Ashen Knight'), findsOneWidget);
+  });
+
   testWidgets('shows brand paints and filters the selected brand', (
     WidgetTester tester,
   ) async {
@@ -116,8 +159,8 @@ void main() {
     expect(find.text('Leadbelcher'), findsOneWidget);
     expect(find.text('UNOWNED'), findsNWidgets(2));
     expect(
-      tester.getTopLeft(find.text('Leadbelcher')).dy,
-      lessThan(tester.getTopLeft(find.text('Mephiston Red')).dy),
+      tester.getTopLeft(find.text('Mephiston Red')).dy,
+      lessThan(tester.getTopLeft(find.text('Leadbelcher')).dy),
     );
     expect(repository.lastRequestedBrandId, 'citadel');
 
@@ -190,6 +233,72 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('No paints for Empty Brand'), findsOneWidget);
+  });
+
+  testWidgets('sorts brand paints by visual HSV color order', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 3000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    const namesInVisualOrder = [
+      'Red near hue boundary',
+      'Dark red',
+      'Bright red',
+      'Light red',
+      'Orange',
+      'Yellow',
+      'Green',
+      'Cyan',
+      'Blue',
+      'Purple',
+      'Black',
+      'Grey',
+      'White',
+      'Invalid color',
+    ];
+    final paints = [
+      _testPaint('white', 'White', '#FFFFFF'),
+      _testPaint('blue', 'Blue', '#0000FF'),
+      _testPaint('missing', 'Invalid color', 'not-hex'),
+      _testPaint('bright-red', 'Bright red', '#FF0000'),
+      _testPaint('purple', 'Purple', '#8000FF'),
+      _testPaint('black', 'Black', '#000000'),
+      _testPaint('orange', 'Orange', '#FF8000'),
+      _testPaint('red-edge', 'Red near hue boundary', '#FF0040'),
+      _testPaint('green', 'Green', '#00FF00'),
+      _testPaint('light-red', 'Light red', '#FF8080'),
+      _testPaint('yellow', 'Yellow', '#FFFF00'),
+      _testPaint('grey', 'Grey', '#777777'),
+      _testPaint('dark-red', 'Dark red', '#800000'),
+      _testPaint('cyan', 'Cyan', '#00FFFF'),
+    ];
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: BrandPaintsScreen(
+          brand: const PaintBrand(id: 'test-brand', name: 'Test brand'),
+          repository: _FakePaintRepository(
+            paintsByBrand: {'test-brand': paints},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    for (var index = 0; index < namesInVisualOrder.length - 1; index++) {
+      expect(
+        tester.getTopLeft(find.text(namesInVisualOrder[index])).dy,
+        lessThan(
+          tester.getTopLeft(find.text(namesInVisualOrder[index + 1])).dy,
+        ),
+        reason:
+            '${namesInVisualOrder[index]} should precede '
+            '${namesInVisualOrder[index + 1]}',
+      );
+    }
   });
 
   testWidgets('validates registration fields and password confirmation', (
@@ -361,6 +470,9 @@ void main() {
   });
 }
 
+CatalogPaint _testPaint(String id, String name, String? hexColor) =>
+    CatalogPaint(id: id, name: name, hexColor: hexColor);
+
 class _FakeAuthService implements AuthService {
   const _FakeAuthService();
 
@@ -391,6 +503,10 @@ class _FakeProjectRepository implements ProjectRepository {
 
   @override
   Future<List<PaintingProject>> getProjects() async => [...projects];
+
+  @override
+  Future<List<PaintingProject>> getRecentProjects() async =>
+      projects.take(2).toList();
 
   @override
   Future<PaintingProject> getProject(String projectId) async =>
@@ -497,27 +613,31 @@ class _FakeProjectRepository implements ProjectRepository {
 }
 
 class _FakePaintRepository implements PaintRepository {
-  _FakePaintRepository({List<PaintBrand>? brands})
-    : brands =
-          brands ??
-          const [
-            PaintBrand(
-              id: 'citadel',
-              name: 'Citadel',
-              color: Color(0xFF9E1B25),
-            ),
-            PaintBrand(
-              id: 'pro-acryl',
-              name: 'Pro Acryl',
-              color: Color(0xFFE6E3D7),
-            ),
-          ];
+  _FakePaintRepository({
+    List<PaintBrand>? brands,
+    Map<String, List<CatalogPaint>>? paintsByBrand,
+  }) : brands =
+           brands ??
+           const [
+             PaintBrand(
+               id: 'citadel',
+               name: 'Citadel',
+               color: Color(0xFF9E1B25),
+             ),
+             PaintBrand(
+               id: 'pro-acryl',
+               name: 'Pro Acryl',
+               color: Color(0xFFE6E3D7),
+             ),
+           ],
+       paintsByBrand = paintsByBrand ?? _defaultPaintsByBrand;
 
   final List<PaintBrand> brands;
+  final Map<String, List<CatalogPaint>> paintsByBrand;
   String? lastRequestedBrandId;
   final Map<String, PaintOwnershipStatus> statuses = {};
 
-  static const _paintsByBrand = {
+  static const _defaultPaintsByBrand = {
     'citadel': [
       CatalogPaint(
         id: 'red',
@@ -544,7 +664,7 @@ class _FakePaintRepository implements PaintRepository {
   @override
   Future<List<CatalogPaint>> getPaintsForBrand(String brandId) async {
     lastRequestedBrandId = brandId;
-    return (_paintsByBrand[brandId] ?? [])
+    return (paintsByBrand[brandId] ?? [])
         .map(
           (paint) => paint.withUserStatus(
             statuses[paint.id] ?? PaintOwnershipStatus.unowned,

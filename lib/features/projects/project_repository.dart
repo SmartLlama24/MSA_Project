@@ -5,6 +5,8 @@ import '../../data/models.dart';
 abstract interface class ProjectRepository {
   Future<List<PaintingProject>> getProjects();
 
+  Future<List<PaintingProject>> getRecentProjects();
+
   Future<PaintingProject> getProject(String projectId);
 
   Future<PaintingProject> createProject(PaintingProject project);
@@ -59,6 +61,18 @@ class SupabaseProjectRepository implements ProjectRepository {
         .eq('user_id', userId)
         .order('updated_at', ascending: false);
 
+    return rows.map(PaintingProject.fromMap).toList();
+  }
+
+  @override
+  Future<List<PaintingProject>> getRecentProjects() async {
+    final userId = _userId;
+    final rows = await _client
+        .from('projects')
+        .select('id, name, subject, status, progress')
+        .eq('user_id', userId)
+        .order('updated_at', ascending: false)
+        .limit(2);
     return rows.map(PaintingProject.fromMap).toList();
   }
 
