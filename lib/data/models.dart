@@ -94,3 +94,99 @@ class PaintEntry {
   final Color color;
   final PaintStatus status;
 }
+
+class PaintBrand {
+  const PaintBrand({required this.id, required this.name, this.color});
+
+  final String id;
+  final String name;
+  final Color? color;
+
+  factory PaintBrand.fromMap(Map<String, dynamic> map) {
+    final paintRows = map['paints'];
+    Color? color;
+    if (paintRows is List) {
+      for (final row in paintRows) {
+        if (row is Map<String, dynamic>) {
+          color = parsePaintColor(row['hex_color']);
+          if (color != null) break;
+        }
+      }
+    }
+
+    return PaintBrand(
+      id: map['id'] as String,
+      name: map['name'] as String? ?? 'Unknown brand',
+      color: color,
+    );
+  }
+}
+
+class CatalogPaint {
+  const CatalogPaint({
+    required this.id,
+    required this.name,
+    this.paintType,
+    this.hexColor,
+    this.userStatus = PaintOwnershipStatus.unowned,
+  });
+
+  final String id;
+  final String name;
+  final String? paintType;
+  final String? hexColor;
+  final PaintOwnershipStatus userStatus;
+
+  Color? get color => parsePaintColor(hexColor);
+
+  factory CatalogPaint.fromMap(Map<String, dynamic> map) {
+    final userPaints = map['user_paints'];
+    final statusRow = userPaints is List && userPaints.isNotEmpty
+        ? userPaints.first
+        : null;
+    final statusValue = statusRow is Map<String, dynamic>
+        ? statusRow['status']
+        : null;
+
+    return CatalogPaint(
+      id: map['id'] as String,
+      name: map['name'] as String? ?? 'Unnamed paint',
+      paintType: map['paint_type'] as String?,
+      hexColor: map['hex_color'] as String?,
+      userStatus: PaintOwnershipStatus.fromDatabase(statusValue),
+    );
+  }
+
+  CatalogPaint withUserStatus(PaintOwnershipStatus status) => CatalogPaint(
+    id: id,
+    name: name,
+    paintType: paintType,
+    hexColor: hexColor,
+    userStatus: status,
+  );
+}
+
+enum PaintOwnershipStatus {
+  unowned,
+  owned,
+  wanted;
+
+  static PaintOwnershipStatus fromDatabase(Object? value) => switch (value) {
+    'owned' => PaintOwnershipStatus.owned,
+    'wanted' => PaintOwnershipStatus.wanted,
+    _ => PaintOwnershipStatus.unowned,
+  };
+
+  String? get databaseValue => switch (this) {
+    PaintOwnershipStatus.unowned => null,
+    PaintOwnershipStatus.owned => 'owned',
+    PaintOwnershipStatus.wanted => 'wanted',
+  };
+}
+
+Color? parsePaintColor(String? value) {
+  if (value == null) return null;
+  final hex = value.trim().replaceFirst('#', '');
+  if (!RegExp(r'^[0-9A-Fa-f]{6}$').hasMatch(hex)) return null;
+  return Color(int.parse('FF$hex', radix: 16));
+}

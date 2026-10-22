@@ -5,9 +5,14 @@ import '../../data/models.dart';
 import '../../data/sample_data.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, required this.onNavigate});
+  const HomeScreen({
+    super.key,
+    required this.onNavigate,
+    required this.onCreateProject,
+  });
 
   final ValueChanged<int> onNavigate;
+  final VoidCallback onCreateProject;
 
   @override
   Widget build(BuildContext context) {
@@ -55,9 +60,7 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 24),
-          _WorkshopCard(
-            onCreateProject: () => _showComingSoon(context, 'Project creation'),
-          ),
+          _WorkshopCard(onCreateProject: onCreateProject),
           const SizedBox(height: 28),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -86,12 +89,6 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature will be available in a future step.')),
     );
   }
 }
@@ -134,7 +131,7 @@ class _WorkshopCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-            'Every great mini\\nstarts with a first coat.',
+            'Every great mini\nstarts with a first coat.',
             style: Theme.of(context).textTheme.titleLarge
                 ?.copyWith(fontSize: 23, height: 1.2),
           ),

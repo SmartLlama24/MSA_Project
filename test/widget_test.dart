@@ -6,6 +6,9 @@ import 'package:paint_app/data/models.dart';
 import 'package:paint_app/data/sample_data.dart';
 import 'package:paint_app/features/auth/auth_screen.dart';
 import 'package:paint_app/features/auth/auth_service.dart';
+import 'package:paint_app/features/paints/brand_paints_screen.dart';
+import 'package:paint_app/features/paints/paint_repository.dart';
+import 'package:paint_app/features/paints/paints_screen.dart';
 import 'package:paint_app/features/projects/project_repository.dart';
 import 'package:paint_app/features/projects/projects_screen.dart';
 
@@ -36,6 +39,7 @@ void main() {
                 )
                 .toList(),
           ),
+          paintRepository: _FakePaintRepository(),
         ),
       ),
     );
@@ -56,16 +60,131 @@ void main() {
 
     await tester.tap(find.text('Paints'));
     await tester.pumpAndSettle();
-    expect(find.text('Mephiston Red'), findsOneWidget);
-
-    await tester.tap(find.text('Wanted'));
-    await tester.pumpAndSettle();
-    expect(find.text('Aethermatic Blue'), findsOneWidget);
-    expect(find.text('Mephiston Red'), findsNothing);
+    expect(find.text('Citadel'), findsOneWidget);
 
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
     expect(find.text('painter@example.com'), findsOneWidget);
+  });
+
+  testWidgets('home create action opens the project creation form', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: AppNavigation(
+          email: 'painter@example.com',
+          onLogout: () async {},
+          projectRepository: _FakeProjectRepository(),
+          paintRepository: _FakePaintRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('New project'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Projects'), findsNWidgets(2));
+    expect(find.text('Project name'), findsOneWidget);
+    expect(find.text('Miniature or subject'), findsOneWidget);
+    expect(find.text('Create project'), findsNWidgets(2));
+  });
+
+  testWidgets('shows brand paints and filters the selected brand', (
+    WidgetTester tester,
+  ) async {
+    final repository = _FakePaintRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: PaintsScreen(repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Citadel'), findsOneWidget);
+    expect(find.text('Pro Acryl'), findsOneWidget);
+    expect(find.textContaining('#9E1B25'), findsNothing);
+    expect(find.byIcon(Icons.palette_outlined), findsNothing);
+
+    await tester.tap(find.text('Citadel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mephiston Red'), findsOneWidget);
+    expect(find.text('Leadbelcher'), findsOneWidget);
+    expect(find.text('UNOWNED'), findsNWidgets(2));
+    expect(repository.lastRequestedBrandId, 'citadel');
+
+    await tester.tap(find.text('Mephiston Red'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your status'), findsOneWidget);
+    await tester.tap(find.text('Owned').last);
+    await tester.pumpAndSettle();
+    expect(find.text('OWNED'), findsOneWidget);
+
+    await tester.tap(find.text('Owned').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Mephiston Red'), findsOneWidget);
+    expect(find.text('Leadbelcher'), findsNothing);
+
+    await tester.tap(find.text('All paints'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Mephiston Red'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Wanted').last);
+    await tester.pumpAndSettle();
+    expect(find.text('WANTED'), findsOneWidget);
+
+    await tester.tap(find.text('Wanted').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Mephiston Red'), findsOneWidget);
+    expect(find.text('Leadbelcher'), findsNothing);
+
+    await tester.tap(find.text('Unowned').first);
+    await tester.pumpAndSettle();
+    expect(find.text('UNOWNED'), findsOneWidget);
+    expect(find.text('Leadbelcher'), findsOneWidget);
+    expect(find.text('Mephiston Red'), findsNothing);
+
+    await tester.tap(find.text('All paints'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'red');
+    tester.binding.focusManager.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    expect(find.text('Mephiston Red'), findsOneWidget);
+    expect(find.text('Leadbelcher'), findsNothing);
+  });
+
+  testWidgets('shows empty state when brand catalog has no entries', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: PaintsScreen(repository: _FakePaintRepository(brands: [])),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No paint brands yet'), findsOneWidget);
+  });
+
+  testWidgets('shows empty paint state for a brand without paints', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: BrandPaintsScreen(
+          brand: const PaintBrand(id: 'empty-brand', name: 'Empty Brand'),
+          repository: _FakePaintRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No paints for Empty Brand'), findsOneWidget);
   });
 
   testWidgets('validates registration fields and password confirmation', (
@@ -191,5 +310,71 @@ class _FakeProjectRepository implements ProjectRepository {
     final index = projects.indexWhere((item) => item.id == project.id);
     projects[index] = project;
     return project;
+  }
+}
+
+class _FakePaintRepository implements PaintRepository {
+  _FakePaintRepository({List<PaintBrand>? brands})
+    : brands =
+          brands ??
+          const [
+            PaintBrand(
+              id: 'citadel',
+              name: 'Citadel',
+              color: Color(0xFF9E1B25),
+            ),
+            PaintBrand(
+              id: 'pro-acryl',
+              name: 'Pro Acryl',
+              color: Color(0xFFE6E3D7),
+            ),
+          ];
+
+  final List<PaintBrand> brands;
+  String? lastRequestedBrandId;
+  final Map<String, PaintOwnershipStatus> statuses = {};
+
+  static const _paintsByBrand = {
+    'citadel': [
+      CatalogPaint(
+        id: 'red',
+        name: 'Mephiston Red',
+        paintType: 'Base',
+        hexColor: '#9E1B25',
+      ),
+      CatalogPaint(
+        id: 'metal',
+        name: 'Leadbelcher',
+        paintType: 'Base · Metallic',
+        hexColor: '#727B7D',
+      ),
+    ],
+  };
+
+  @override
+  Future<List<PaintBrand>> getBrands() async => brands;
+
+  @override
+  Future<List<CatalogPaint>> getPaintsForBrand(String brandId) async {
+    lastRequestedBrandId = brandId;
+    return (_paintsByBrand[brandId] ?? [])
+        .map(
+          (paint) => paint.withUserStatus(
+            statuses[paint.id] ?? PaintOwnershipStatus.unowned,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> setPaintStatus(
+    String paintId,
+    PaintOwnershipStatus status,
+  ) async {
+    if (status == PaintOwnershipStatus.unowned) {
+      statuses.remove(paintId);
+    } else {
+      statuses[paintId] = status;
+    }
   }
 }

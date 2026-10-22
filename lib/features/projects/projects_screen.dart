@@ -13,10 +13,10 @@ class ProjectsScreen extends StatefulWidget {
   final ProjectRepository? repository;
 
   @override
-  State<ProjectsScreen> createState() => _ProjectsScreenState();
+  ProjectsScreenState createState() => ProjectsScreenState();
 }
 
-class _ProjectsScreenState extends State<ProjectsScreen> {
+class ProjectsScreenState extends State<ProjectsScreen> {
   late final ProjectRepository _repository;
   List<PaintingProject> _projects = [];
   bool _isLoading = true;
@@ -52,7 +52,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  Future<void> _createProject() async {
+  Future<void> openCreateProject() async {
     final project = await showDialog<PaintingProject>(
       context: context,
       builder: (_) => ProjectFormDialog(onSave: _repository.createProject),
@@ -147,7 +147,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ),
                 IconButton.filledTonal(
                   tooltip: 'Create project',
-                  onPressed: _createProject,
+                  onPressed: openCreateProject,
                   icon: const Icon(Icons.add),
                   style: IconButton.styleFrom(
                     foregroundColor: AppTheme.accent,
@@ -225,7 +225,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                 ),
                 const SizedBox(height: 18),
                 FilledButton.icon(
-                  onPressed: _createProject,
+                  onPressed: openCreateProject,
                   icon: const Icon(Icons.add),
                   label: const Text('Create project'),
                   style: FilledButton.styleFrom(
