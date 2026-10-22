@@ -104,7 +104,7 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
           paint.userStatus == PaintOwnershipStatus.unowned,
       };
       return matchesSearch && matchesFilter;
-    }).toList();
+    }).toList()..sort(_comparePaintHexColors);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.brand.name)),
@@ -145,6 +145,19 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
         ),
       ),
     );
+  }
+
+  int _comparePaintHexColors(CatalogPaint first, CatalogPaint second) {
+    final firstHex = first.hexColor?.trim().replaceFirst('#', '').toUpperCase();
+    final secondHex = second.hexColor
+        ?.trim()
+        .replaceFirst('#', '')
+        .toUpperCase();
+    if (firstHex == null || firstHex.isEmpty) {
+      return secondHex == null || secondHex.isEmpty ? 0 : 1;
+    }
+    if (secondHex == null || secondHex.isEmpty) return -1;
+    return firstHex.compareTo(secondHex);
   }
 
   Widget _buildFilters() {

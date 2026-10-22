@@ -116,7 +116,8 @@ class ProjectsScreenState extends State<ProjectsScreen> {
   void _openDetails(PaintingProject project) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ProjectDetailsScreen(project: project),
+        builder: (_) =>
+            ProjectDetailsScreen(project: project, repository: _repository),
       ),
     );
   }

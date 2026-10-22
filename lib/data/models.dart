@@ -77,6 +77,49 @@ class PaintingProject {
   };
 }
 
+class ProjectStep {
+  const ProjectStep({
+    this.id,
+    required this.projectId,
+    required this.stepOrder,
+    required this.title,
+    required this.instructions,
+  });
+
+  final String? id;
+  final String projectId;
+  final int stepOrder;
+  final String title;
+  final String instructions;
+
+  factory ProjectStep.fromMap(Map<String, dynamic> map) {
+    final orderValue = map['step_order'];
+    if (orderValue is! num) {
+      throw const FormatException('Project step has an invalid order.');
+    }
+
+    return ProjectStep(
+      id: map['id'] as String?,
+      projectId: map['project_id'] as String,
+      stepOrder: orderValue.toInt(),
+      title: map['title'] as String? ?? 'Untitled step',
+      instructions: map['instructions'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toInsertMap() => {
+    'project_id': projectId,
+    'step_order': stepOrder,
+    'title': title,
+    'instructions': instructions,
+  };
+
+  Map<String, dynamic> toUpdateMap() => {
+    'title': title,
+    'instructions': instructions,
+  };
+}
+
 enum PaintStatus { owned, wanted, missing }
 
 class PaintEntry {
@@ -96,11 +139,27 @@ class PaintEntry {
 }
 
 class PaintBrand {
-  const PaintBrand({required this.id, required this.name, this.color});
+  const PaintBrand({
+    required this.id,
+    required this.name,
+    this.color,
+    this.logoPath,
+    this.logoUrl,
+  });
 
   final String id;
   final String name;
   final Color? color;
+  final String? logoPath;
+  final String? logoUrl;
+
+  PaintBrand withLogoUrl(String? url) => PaintBrand(
+    id: id,
+    name: name,
+    color: color,
+    logoPath: logoPath,
+    logoUrl: url,
+  );
 
   factory PaintBrand.fromMap(Map<String, dynamic> map) {
     final paintRows = map['paints'];
@@ -118,6 +177,7 @@ class PaintBrand {
       id: map['id'] as String,
       name: map['name'] as String? ?? 'Unknown brand',
       color: color,
+      logoPath: map['logo_path'] as String?,
     );
   }
 }

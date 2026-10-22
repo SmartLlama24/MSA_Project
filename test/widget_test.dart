@@ -9,6 +9,7 @@ import 'package:paint_app/features/auth/auth_service.dart';
 import 'package:paint_app/features/paints/brand_paints_screen.dart';
 import 'package:paint_app/features/paints/paint_repository.dart';
 import 'package:paint_app/features/paints/paints_screen.dart';
+import 'package:paint_app/features/projects/project_details_screen.dart';
 import 'package:paint_app/features/projects/project_repository.dart';
 import 'package:paint_app/features/projects/projects_screen.dart';
 
@@ -114,6 +115,10 @@ void main() {
     expect(find.text('Mephiston Red'), findsOneWidget);
     expect(find.text('Leadbelcher'), findsOneWidget);
     expect(find.text('UNOWNED'), findsNWidgets(2));
+    expect(
+      tester.getTopLeft(find.text('Leadbelcher')).dy,
+      lessThan(tester.getTopLeft(find.text('Mephiston Red')).dy),
+    );
     expect(repository.lastRequestedBrandId, 'citadel');
 
     await tester.tap(find.text('Mephiston Red'));
@@ -254,6 +259,106 @@ void main() {
     expect(repository.projects, isEmpty);
     expect(find.text('Your workbench is clear'), findsOneWidget);
   });
+
+  testWidgets('manages ordered painting steps in project details', (
+    WidgetTester tester,
+  ) async {
+    final project = PaintingProject(
+      id: 'project-1',
+      name: 'Iron Sentinel',
+      subject: 'Dreadnought',
+      progress: 0.4,
+      status: ProjectStatus.inProgress,
+      icon: Icons.shield_outlined,
+      colors: const [Color(0xFF40536B), Color(0xFF202A38)],
+    );
+    final repository = _FakeProjectRepository(projects: [project]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: ProjectDetailsScreen(project: project, repository: repository),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Iron Sentinel'), findsNWidgets(2));
+    expect(find.text('40%'), findsOneWidget);
+    expect(find.text('In progress'), findsOneWidget);
+    expect(find.text('No painting steps yet'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Edit project'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'Iron Sentinel Mk II',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'War machine');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Iron Sentinel Mk II'), findsNWidgets(2));
+    expect(find.text('40%'), findsOneWidget);
+
+    await tester.tap(find.text('Add step'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).at(0), 'Prime armor');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'Apply a smooth black primer.',
+    );
+    await tester.tap(find.text('Add step').last);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add step'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).at(0), 'Basecoat armor');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'Block in the main armor color.',
+    );
+    await tester.tap(find.text('Add step').last);
+    await tester.pumpAndSettle();
+
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -600));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithIcon(IconButton, Icons.keyboard_arrow_up).last,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      (await repository.getProjectSteps('project-1')).first.title,
+      'Basecoat armor',
+    );
+    expect(
+      (await repository.getProjectSteps('project-1'))
+          .map((step) => step.stepOrder)
+          .toList(),
+      [1, 2],
+    );
+
+    await tester.tap(find.byTooltip('Step actions').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'Basecoat revised',
+    );
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Basecoat revised'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Step actions').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Delete').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Basecoat revised'), findsNothing);
+    expect(repository.stepsByProject['project-1'], hasLength(1));
+    expect((await repository.getProjectSteps('project-1')).single.stepOrder, 1);
+  });
 }
 
 class _FakeAuthService implements AuthService {
@@ -281,9 +386,15 @@ class _FakeProjectRepository implements ProjectRepository {
 
   final List<PaintingProject> projects;
   int _nextId = 0;
+  int _nextStepId = 0;
+  final Map<String, List<ProjectStep>> stepsByProject = {};
 
   @override
   Future<List<PaintingProject>> getProjects() async => [...projects];
+
+  @override
+  Future<PaintingProject> getProject(String projectId) async =>
+      projects.firstWhere((project) => project.id == projectId);
 
   @override
   Future<PaintingProject> createProject(PaintingProject project) async {
@@ -303,6 +414,78 @@ class _FakeProjectRepository implements ProjectRepository {
   @override
   Future<void> deleteProject(String projectId) async {
     projects.removeWhere((project) => project.id == projectId);
+  }
+
+  @override
+  Future<List<ProjectStep>> getProjectSteps(String projectId) async =>
+      [...(stepsByProject[projectId] ?? [])]
+        ..sort((a, b) => a.stepOrder.compareTo(b.stepOrder));
+
+  @override
+  Future<ProjectStep> createProjectStep({
+    required String projectId,
+    required String title,
+    required String instructions,
+  }) async {
+    final steps = stepsByProject.putIfAbsent(projectId, () => []);
+    final step = ProjectStep(
+      id: 'step-${_nextStepId++}',
+      projectId: projectId,
+      stepOrder: steps.isEmpty
+          ? 1
+          : steps
+                    .map((item) => item.stepOrder)
+                    .reduce((a, b) => a > b ? a : b) +
+                1,
+      title: title,
+      instructions: instructions,
+    );
+    steps.add(step);
+    return step;
+  }
+
+  @override
+  Future<ProjectStep> updateProjectStep(ProjectStep step) async {
+    final steps = stepsByProject[step.projectId]!;
+    final index = steps.indexWhere((item) => item.id == step.id);
+    steps[index] = step;
+    return step;
+  }
+
+  @override
+  Future<void> deleteProjectStep(ProjectStep step) async {
+    final steps = stepsByProject[step.projectId]!;
+    steps.removeWhere((item) => item.id == step.id);
+    steps.sort((a, b) => a.stepOrder.compareTo(b.stepOrder));
+    for (var index = 0; index < steps.length; index++) {
+      final step = steps[index];
+      steps[index] = ProjectStep(
+        id: step.id,
+        projectId: step.projectId,
+        stepOrder: index + 1,
+        title: step.title,
+        instructions: step.instructions,
+      );
+    }
+  }
+
+  @override
+  Future<void> reorderProjectSteps(
+    String projectId,
+    List<String> orderedStepIds,
+  ) async {
+    final steps = stepsByProject[projectId]!;
+    final stepsById = {for (final step in steps) step.id!: step};
+    stepsByProject[projectId] = [
+      for (var index = 0; index < orderedStepIds.length; index++)
+        ProjectStep(
+          id: stepsById[orderedStepIds[index]]!.id,
+          projectId: projectId,
+          stepOrder: index + 1,
+          title: stepsById[orderedStepIds[index]]!.title,
+          instructions: stepsById[orderedStepIds[index]]!.instructions,
+        ),
+    ];
   }
 
   @override
@@ -353,6 +536,10 @@ class _FakePaintRepository implements PaintRepository {
 
   @override
   Future<List<PaintBrand>> getBrands() async => brands;
+
+  @override
+  Future<Map<String, String>> getBrandLogoUrls(List<PaintBrand> brands) async =>
+      {};
 
   @override
   Future<List<CatalogPaint>> getPaintsForBrand(String brandId) async {

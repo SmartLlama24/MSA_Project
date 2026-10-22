@@ -5,6 +5,8 @@ import '../../data/models.dart';
 abstract interface class PaintRepository {
   Future<List<PaintBrand>> getBrands();
 
+  Future<Map<String, String>> getBrandLogoUrls(List<PaintBrand> brands);
+
   Future<List<CatalogPaint>> getPaintsForBrand(String brandId);
 
   Future<void> setPaintStatus(String paintId, PaintOwnershipStatus status);
@@ -19,7 +21,7 @@ class SupabasePaintRepository implements PaintRepository {
   Future<List<PaintBrand>> getBrands() async {
     final rows = await _client
         .from('paint_brands')
-        .select('id, name, paints!inner(hex_color)')
+        .select('id, name, logo_path, paints!inner(hex_color)')
         .order('name')
         .order(
           'hex_color',
@@ -32,6 +34,19 @@ class SupabasePaintRepository implements PaintRepository {
   }
 
   @override
+  Future<Map<String, String>> getBrandLogoUrls(List<PaintBrand> brands) async {
+    final storage = _client.storage.from('Brand Logos');
+    final urls = <String, String>{};
+    for (final brand in brands) {
+      final path = brand.logoPath?.trim();
+      if (path != null && path.isNotEmpty) {
+        urls[brand.id] = storage.getPublicUrl(path);
+      }
+    }
+    return urls;
+  }
+
+  @override
   Future<List<CatalogPaint>> getPaintsForBrand(String brandId) async {
     final userId = _userId;
     final rows = await _client
@@ -39,6 +54,7 @@ class SupabasePaintRepository implements PaintRepository {
         .select('id, name, paint_type, hex_color, user_paints(status)')
         .eq('brand_id', brandId)
         .eq('user_paints.user_id', userId)
+        .order('hex_color', ascending: true, nullsFirst: false)
         .order('name');
     return rows.map(CatalogPaint.fromMap).toList();
   }

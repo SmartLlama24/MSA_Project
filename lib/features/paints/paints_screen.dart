@@ -20,6 +20,7 @@ class _PaintsScreenState extends State<PaintsScreen> {
   List<PaintBrand> _brands = [];
   bool _isLoading = true;
   String? _error;
+  String? _logoError;
 
   @override
   void initState() {
@@ -33,12 +34,23 @@ class _PaintsScreenState extends State<PaintsScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _logoError = null;
     });
     try {
       final brands = await _repository.getBrands();
+      Map<String, String> logoUrls = {};
+      String? logoError;
+      try {
+        logoUrls = await _repository.getBrandLogoUrls(brands);
+      } on StorageException {
+        logoError = 'Brand logos are unavailable right now. Showing color placeholders.';
+      }
       if (!mounted) return;
       setState(() {
-        _brands = brands;
+        _brands = brands
+            .map((brand) => brand.withLogoUrl(logoUrls[brand.id]))
+            .toList();
+        _logoError = logoError;
         _isLoading = false;
       });
     } catch (error) {
@@ -139,21 +151,38 @@ class _PaintsScreenState extends State<PaintsScreen> {
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadBrands,
-      color: AppTheme.accent,
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
-        itemCount: _brands.length,
-        itemBuilder: (context, index) {
-          final brand = _brands[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _BrandCard(brand: brand, onTap: () => _openBrand(brand)),
-          );
-        },
-      ),
+    return Column(
+      children: [
+        if (_logoError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Text(
+              _logoError!,
+              style: const TextStyle(color: AppTheme.mutedText),
+            ),
+          ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadBrands,
+            color: AppTheme.accent,
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
+              itemCount: _brands.length,
+              itemBuilder: (context, index) {
+                final brand = _brands[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _BrandCard(
+                    brand: brand,
+                    onTap: () => _openBrand(brand),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -192,6 +221,27 @@ class _BrandCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.12),
                   ),
                 ),
+                child: brand.logoUrl == null
+                    ? null
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          brand.logoUrl!,
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                              ? child
+                              : ColoredBox(
+                                  color: color ?? AppTheme.elevatedSurface,
+                                ),
+                          errorBuilder: (context, error, stackTrace) =>
+                              ColoredBox(
+                                color: color ?? AppTheme.elevatedSurface,
+                              ),
+                        ),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
