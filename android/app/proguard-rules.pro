@@ -1,0 +1,4 @@
+-keep interface kotlin.coroutines.Continuation { *; }
+-keep enum kotlin.coroutines.intrinsics.CoroutineSingletons { *; }
+-keep class kotlin.Result { *; }
+-keep class kotlin.Result$* { *; }
