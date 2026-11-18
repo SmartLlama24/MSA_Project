@@ -7,6 +7,7 @@ import '../features/paints/paints_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/paints/paint_repository.dart';
 import '../features/projects/project_details_screen.dart';
+import '../features/projects/project_photo_repository.dart';
 import '../features/projects/project_repository.dart';
 import '../features/projects/projects_screen.dart';
 
@@ -17,12 +18,14 @@ class AppNavigation extends StatefulWidget {
     required this.onLogout,
     this.projectRepository,
     this.paintRepository,
+    this.photoRepository,
   });
 
   final String email;
   final Future<void> Function() onLogout;
   final ProjectRepository? projectRepository;
   final PaintRepository? paintRepository;
+  final ProjectPhotoRepository? photoRepository;
 
   @override
   State<AppNavigation> createState() => _AppNavigationState();
@@ -31,6 +34,8 @@ class AppNavigation extends StatefulWidget {
 class _AppNavigationState extends State<AppNavigation> {
   int _selectedIndex = 0;
   late final ProjectRepository _projectRepository;
+  late final PaintRepository _paintRepository;
+  late final ProjectPhotoRepository _photoRepository;
   final _homeKey = GlobalKey<HomeScreenState>();
   final _projectsKey = GlobalKey<ProjectsScreenState>();
 
@@ -40,6 +45,12 @@ class _AppNavigationState extends State<AppNavigation> {
     _projectRepository =
         widget.projectRepository ??
         SupabaseProjectRepository(Supabase.instance.client);
+    _paintRepository =
+        widget.paintRepository ??
+        SupabasePaintRepository(Supabase.instance.client);
+    _photoRepository =
+        widget.photoRepository ??
+        SupabaseProjectPhotoRepository(Supabase.instance.client);
   }
 
   void _selectTab(int index) {
@@ -59,6 +70,8 @@ class _AppNavigationState extends State<AppNavigation> {
         builder: (_) => ProjectDetailsScreen(
           project: project,
           repository: _projectRepository,
+          paintRepository: _paintRepository,
+          photoRepository: _photoRepository,
         ),
       ),
     );
@@ -74,9 +87,15 @@ class _AppNavigationState extends State<AppNavigation> {
         onCreateProject: _openCreateProject,
         onOpenProject: _openProjectDetails,
         projectRepository: _projectRepository,
+        photoRepository: _photoRepository,
       ),
-      ProjectsScreen(key: _projectsKey, repository: _projectRepository),
-      PaintsScreen(repository: widget.paintRepository),
+      ProjectsScreen(
+        key: _projectsKey,
+        repository: _projectRepository,
+        paintRepository: _paintRepository,
+        photoRepository: _photoRepository,
+      ),
+      PaintsScreen(repository: _paintRepository),
       ProfileScreen(email: widget.email, onLogout: widget.onLogout),
     ];
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
+import '../projects/project_photo_repository.dart';
 import '../projects/project_repository.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -11,12 +12,14 @@ class HomeScreen extends StatefulWidget {
     required this.onCreateProject,
     required this.onOpenProject,
     required this.projectRepository,
+    this.photoRepository,
   });
 
   final ValueChanged<int> onNavigate;
   final VoidCallback onCreateProject;
   final ValueChanged<PaintingProject> onOpenProject;
   final ProjectRepository projectRepository;
+  final ProjectPhotoRepository? photoRepository;
 
   @override
   State<HomeScreen> createState() => HomeScreenState();
@@ -39,7 +42,18 @@ class HomeScreenState extends State<HomeScreen> {
       _projectsError = null;
     });
     try {
-      final projects = await widget.projectRepository.getRecentProjects();
+      var projects = await widget.projectRepository.getRecentProjects();
+      final photoRepository = widget.photoRepository;
+      if (photoRepository != null) {
+        projects = await Future.wait(
+          projects.map((project) async {
+            final photoId = project.coverPhotoId;
+            if (photoId == null) return project;
+            final url = await photoRepository.getSignedUrlForPhoto(photoId);
+            return project.copyWith(coverPhotoUrl: url);
+          }),
+        );
+      }
       if (!mounted) return;
       setState(() {
         _recentProjects = projects;
@@ -257,7 +271,9 @@ class ProjectPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = project.progress;
+    final progress = project.totalStepCount == 0
+        ? 0.0
+        : project.completedStepCount / project.totalStepCount;
     return Material(
       color: AppTheme.surface,
       borderRadius: BorderRadius.circular(20),
@@ -283,7 +299,15 @@ class ProjectPreviewCard extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(project.icon, color: Colors.white, size: 27),
+                clipBehavior: Clip.antiAlias,
+                child: project.coverPhotoUrl == null
+                    ? Icon(project.icon, color: Colors.white, size: 27)
+                    : Image.network(
+                        project.coverPhotoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(project.icon, color: Colors.white, size: 27),
+                      ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -317,7 +341,7 @@ class ProjectPreviewCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Text(
-                '${(progress * 100).round()}%',
+                '${project.completedStepCount}/${project.totalStepCount}',
                 style: const TextStyle(
                   color: AppTheme.accent,
                   fontWeight: FontWeight.w700,

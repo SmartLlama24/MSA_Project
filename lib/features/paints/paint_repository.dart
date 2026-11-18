@@ -9,6 +9,8 @@ abstract interface class PaintRepository {
 
   Future<List<CatalogPaint>> getPaintsForBrand(String brandId);
 
+  Future<List<CatalogPaint>> getCatalogPaints();
+
   Future<void> setPaintStatus(String paintId, PaintOwnershipStatus status);
 }
 
@@ -54,6 +56,15 @@ class SupabasePaintRepository implements PaintRepository {
         .select('id, name, paint_type, hex_color, user_paints(status)')
         .eq('brand_id', brandId)
         .eq('user_paints.user_id', userId)
+        .order('name');
+    return rows.map(CatalogPaint.fromMap).toList();
+  }
+
+  @override
+  Future<List<CatalogPaint>> getCatalogPaints() async {
+    final rows = await _client
+        .from('paints')
+        .select('id, name, paint_type, hex_color, paint_brands(name)')
         .order('name');
     return rows.map(CatalogPaint.fromMap).toList();
   }

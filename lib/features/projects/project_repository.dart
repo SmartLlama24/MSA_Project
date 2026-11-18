@@ -17,6 +17,16 @@ abstract interface class ProjectRepository {
 
   Future<List<ProjectStep>> getProjectSteps(String projectId);
 
+  Future<void> setProjectStepCompleted(
+    ProjectStep step, {
+    required bool isCompleted,
+  });
+
+  Future<void> setProjectStepPaints(
+    ProjectStep step,
+    List<CatalogPaint> paints,
+  );
+
   Future<ProjectStep> createProjectStep({
     required String projectId,
     required String title,
@@ -57,7 +67,10 @@ class SupabaseProjectRepository implements ProjectRepository {
     final userId = _userId;
     final rows = await _client
         .from('projects')
-        .select('id, name, subject, status, progress')
+        .select(
+          'id, name, subject, status, progress, cover_photo_id, '
+          'project_steps(is_completed)',
+        )
         .eq('user_id', userId)
         .order('updated_at', ascending: false);
 
@@ -69,7 +82,10 @@ class SupabaseProjectRepository implements ProjectRepository {
     final userId = _userId;
     final rows = await _client
         .from('projects')
-        .select('id, name, subject, status, progress')
+        .select(
+          'id, name, subject, status, progress, cover_photo_id, '
+          'project_steps(is_completed)',
+        )
         .eq('user_id', userId)
         .order('updated_at', ascending: false)
         .limit(2);
@@ -81,7 +97,7 @@ class SupabaseProjectRepository implements ProjectRepository {
     final userId = _userId;
     final row = await _client
         .from('projects')
-        .select('id, name, subject, status, progress')
+        .select('id, name, subject, status, progress, cover_photo_id')
         .eq('id', projectId)
         .eq('user_id', userId)
         .single();
@@ -91,10 +107,16 @@ class SupabaseProjectRepository implements ProjectRepository {
   @override
   Future<PaintingProject> createProject(PaintingProject project) async {
     final userId = _userId;
+    final insertMap = project.toInsertMap(userId: userId)
+      ..['status'] = 'planned'
+      ..['progress'] = 0;
     final row = await _client
         .from('projects')
-        .insert(project.toInsertMap(userId: userId))
-        .select('id, name, subject, status, progress')
+        .insert(insertMap)
+        .select(
+          'id, name, subject, status, progress, cover_photo_id, '
+          'project_steps(is_completed)',
+        )
         .single();
 
     return PaintingProject.fromMap(row);
@@ -108,16 +130,35 @@ class SupabaseProjectRepository implements ProjectRepository {
       throw ArgumentError('A project ID is required to update a project.');
     }
 
+    final steps = await _client
+        .from('project_steps')
+        .select('is_completed')
+        .eq('project_id', projectId);
+    final hasCompletedSteps = steps.any((step) => step['is_completed'] == true);
+    final status = project.status == ProjectStatus.completed
+        ? ProjectStatus.completed
+        : hasCompletedSteps
+        ? ProjectStatus.inProgress
+        : ProjectStatus.planned;
     final row = await _client
         .from('projects')
-        .update(project.toUpdateMap())
+        .update({...project.toUpdateMap(), 'status': _statusToDatabase(status)})
         .eq('id', projectId)
         .eq('user_id', userId)
-        .select('id, name, subject, status, progress')
+        .select(
+          'id, name, subject, status, progress, cover_photo_id, '
+          'project_steps(is_completed)',
+        )
         .single();
 
     return PaintingProject.fromMap(row);
   }
+
+  String _statusToDatabase(ProjectStatus status) => switch (status) {
+    ProjectStatus.planned => 'planned',
+    ProjectStatus.inProgress => 'in_progress',
+    ProjectStatus.completed => 'completed',
+  };
 
   @override
   Future<void> deleteProject(String projectId) async {
@@ -134,10 +175,70 @@ class SupabaseProjectRepository implements ProjectRepository {
     _requireSignedIn();
     final rows = await _client
         .from('project_steps')
-        .select('id, project_id, step_order, title, instructions')
+        .select(
+          'id, project_id, step_order, title, instructions, is_completed, '
+          'step_paints(paints(id, name, paint_type, hex_color, paint_brands(name)))',
+        )
         .eq('project_id', projectId)
         .order('step_order');
     return rows.map(ProjectStep.fromMap).toList();
+  }
+
+  @override
+  Future<void> setProjectStepCompleted(
+    ProjectStep step, {
+    required bool isCompleted,
+  }) async {
+    _requireSignedIn();
+    final stepId = step.id;
+    if (stepId == null) {
+      throw ArgumentError('A step ID is required to update completion.');
+    }
+
+    await _client
+        .from('project_steps')
+        .update({'is_completed': isCompleted})
+        .eq('id', stepId)
+        .eq('project_id', step.projectId)
+        .select('id')
+        .single();
+  }
+
+  @override
+  Future<void> setProjectStepPaints(
+    ProjectStep step,
+    List<CatalogPaint> paints,
+  ) async {
+    _requireSignedIn();
+    final stepId = step.id;
+    if (stepId == null) {
+      throw ArgumentError('A step ID is required to manage its paints.');
+    }
+
+    final existingIds = step.paints.map((paint) => paint.id).toSet();
+    final selectedPaints = {for (final paint in paints) paint.id: paint};
+    final selectedIds = selectedPaints.keys.toSet();
+    final addedIds = selectedIds.difference(existingIds);
+    final removedIds = existingIds.difference(selectedIds);
+
+    if (addedIds.isNotEmpty) {
+      await _client
+          .from('step_paints')
+          .upsert(
+            addedIds
+                .map((paintId) => {'step_id': stepId, 'paint_id': paintId})
+                .toList(),
+            onConflict: 'step_id,paint_id',
+            ignoreDuplicates: true,
+          );
+    }
+    for (final paintId in removedIds) {
+      await _client
+          .from('step_paints')
+          .delete()
+          .eq('step_id', stepId)
+          .eq('paint_id', paintId);
+    }
   }
 
   @override

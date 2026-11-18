@@ -18,8 +18,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _subjectController;
-  late ProjectStatus _status;
-  late double _progress;
+  late bool _markCompleted;
   bool _isSaving = false;
   String? _error;
 
@@ -31,8 +30,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
     final project = widget.project;
     _nameController = TextEditingController(text: project?.name ?? '');
     _subjectController = TextEditingController(text: project?.subject ?? '');
-    _status = project?.status ?? ProjectStatus.planned;
-    _progress = project?.progress ?? 0;
+    _markCompleted = project?.status == ProjectStatus.completed;
   }
 
   @override
@@ -54,8 +52,10 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
       id: widget.project?.id,
       name: _nameController.text.trim(),
       subject: _subjectController.text.trim(),
-      progress: _progress,
-      status: _status,
+      progress: widget.project?.progress ?? 0,
+      status: _markCompleted
+          ? ProjectStatus.completed
+          : ProjectStatus.planned,
       icon: widget.project?.icon ?? Icons.shield_outlined,
       colors:
           widget.project?.colors ??
@@ -113,51 +113,23 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                   },
                 ),
                 const SizedBox(height: 14),
-                DropdownButtonFormField<ProjectStatus>(
-                  initialValue: _status,
-                  decoration: _decoration('Status'),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ProjectStatus.planned,
-                      child: Text('Planned'),
+                if (_isEditing) ...[
+                  const SizedBox(height: 8),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _markCompleted,
+                    onChanged: _isSaving
+                        ? null
+                        : (value) => setState(
+                            () => _markCompleted = value ?? false,
+                          ),
+                    title: const Text('Mark as completed'),
+                    subtitle: const Text(
+                      'Planned and in-progress statuses follow your completed steps.',
                     ),
-                    DropdownMenuItem(
-                      value: ProjectStatus.inProgress,
-                      child: Text('In progress'),
-                    ),
-                    DropdownMenuItem(
-                      value: ProjectStatus.completed,
-                      child: Text('Completed'),
-                    ),
-                  ],
-                  onChanged: _isSaving
-                      ? null
-                      : (value) {
-                          if (value != null) setState(() => _status = value);
-                        },
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Progress'),
-                    Text(
-                      '${(_progress * 100).round()}%',
-                      style: const TextStyle(
-                        color: AppTheme.accent,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                Slider(
-                  value: _progress,
-                  divisions: 20,
-                  activeColor: AppTheme.accent,
-                  onChanged: _isSaving
-                      ? null
-                      : (value) => setState(() => _progress = value),
-                ),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                ],
                 if (_error != null) ...[
                   const SizedBox(height: 8),
                   Text(

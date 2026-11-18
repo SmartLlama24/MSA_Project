@@ -3,14 +3,23 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
+import '../paints/paint_repository.dart';
 import 'project_details_screen.dart';
 import 'project_form_dialog.dart';
+import 'project_photo_repository.dart';
 import 'project_repository.dart';
 
 class ProjectsScreen extends StatefulWidget {
-  const ProjectsScreen({super.key, this.repository});
+  const ProjectsScreen({
+    super.key,
+    this.repository,
+    this.paintRepository,
+    this.photoRepository,
+  });
 
   final ProjectRepository? repository;
+  final PaintRepository? paintRepository;
+  final ProjectPhotoRepository? photoRepository;
 
   @override
   ProjectsScreenState createState() => ProjectsScreenState();
@@ -18,6 +27,8 @@ class ProjectsScreen extends StatefulWidget {
 
 class ProjectsScreenState extends State<ProjectsScreen> {
   late final ProjectRepository _repository;
+  late final PaintRepository _paintRepository;
+  late final ProjectPhotoRepository? _photoRepository;
   List<PaintingProject> _projects = [];
   bool _isLoading = true;
   String? _error;
@@ -28,6 +39,10 @@ class ProjectsScreenState extends State<ProjectsScreen> {
     _repository =
         widget.repository ??
         SupabaseProjectRepository(Supabase.instance.client);
+    _paintRepository =
+        widget.paintRepository ??
+        SupabasePaintRepository(Supabase.instance.client);
+    _photoRepository = widget.photoRepository;
     _loadProjects();
   }
 
@@ -37,7 +52,17 @@ class ProjectsScreenState extends State<ProjectsScreen> {
       _error = null;
     });
     try {
-      final projects = await _repository.getProjects();
+      var projects = await _repository.getProjects();
+      if (widget.photoRepository != null) {
+        projects = await Future.wait(
+          projects.map((project) async {
+            final photoId = project.coverPhotoId;
+            if (photoId == null) return project;
+            final url = await _photoRepository!.getSignedUrlForPhoto(photoId);
+            return project.copyWith(coverPhotoUrl: url);
+          }),
+        );
+      }
       if (!mounted) return;
       setState(() {
         _projects = projects;
@@ -99,6 +124,13 @@ class ProjectsScreenState extends State<ProjectsScreen> {
     if (shouldDelete != true) return;
 
     try {
+      final photoRepository = widget.photoRepository;
+      if (photoRepository != null) {
+        final photos = await photoRepository.getProjectPhotos(projectId);
+        for (final photo in photos) {
+          await photoRepository.deletePhoto(photo);
+        }
+      }
       await _repository.deleteProject(projectId);
       await _loadProjects();
       if (mounted) {
@@ -113,13 +145,18 @@ class ProjectsScreenState extends State<ProjectsScreen> {
     }
   }
 
-  void _openDetails(PaintingProject project) {
-    Navigator.of(context).push(
+  Future<void> _openDetails(PaintingProject project) async {
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            ProjectDetailsScreen(project: project, repository: _repository),
+        builder: (_) => ProjectDetailsScreen(
+          project: project,
+          repository: _repository,
+          paintRepository: _paintRepository,
+          photoRepository: _photoRepository,
+        ),
       ),
     );
+    if (mounted) await _loadProjects();
   }
 
   @override
@@ -254,6 +291,7 @@ class ProjectsScreenState extends State<ProjectsScreen> {
             padding: const EdgeInsets.only(bottom: 14),
             child: _ProjectCard(
               project: project,
+              coverPhotoUrl: project.coverPhotoUrl,
               onTap: () => _openDetails(project),
               onEdit: () => _editProject(project),
               onDelete: () => _deleteProject(project),
@@ -268,12 +306,14 @@ class ProjectsScreenState extends State<ProjectsScreen> {
 class _ProjectCard extends StatelessWidget {
   const _ProjectCard({
     required this.project,
+    required this.coverPhotoUrl,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
   });
 
   final PaintingProject project;
+  final String? coverPhotoUrl;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -285,7 +325,11 @@ class _ProjectCard extends StatelessWidget {
       ProjectStatus.planned => 'PLANNED',
       ProjectStatus.completed => 'COMPLETED',
     };
-    final progressLabel = '${(project.progress * 100).round()}%';
+    final progressLabel =
+        '${project.completedStepCount}/${project.totalStepCount}';
+    final stepProgress = project.totalStepCount == 0
+        ? 0.0
+        : project.completedStepCount / project.totalStepCount;
 
     return InkWell(
       onTap: onTap,
@@ -313,7 +357,15 @@ class _ProjectCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Icon(project.icon, color: Colors.white, size: 30),
+                  clipBehavior: Clip.antiAlias,
+                  child: coverPhotoUrl == null
+                      ? Icon(project.icon, color: Colors.white, size: 30)
+                      : Image.network(
+                          coverPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(project.icon, color: Colors.white, size: 30),
+                        ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -364,7 +416,7 @@ class _ProjectCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: project.progress,
+                value: stepProgress,
                 minHeight: 6,
                 backgroundColor: AppTheme.elevatedSurface,
                 color: AppTheme.accent,

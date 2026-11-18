@@ -11,6 +11,10 @@ class PaintingProject {
     required this.status,
     required this.icon,
     required this.colors,
+    this.completedStepCount = 0,
+    this.totalStepCount = 0,
+    this.coverPhotoId,
+    this.coverPhotoUrl,
   });
 
   final String? id;
@@ -20,9 +24,13 @@ class PaintingProject {
   final ProjectStatus status;
   final IconData icon;
   final List<Color> colors;
+  final int completedStepCount;
+  final int totalStepCount;
+  final String? coverPhotoId;
+  final String? coverPhotoUrl;
 
   factory PaintingProject.fromMap(Map<String, dynamic> map) {
-    final status = switch (map['status']) {
+    final storedStatus = switch (map['status']) {
       'in_progress' => ProjectStatus.inProgress,
       'completed' => ProjectStatus.completed,
       _ => ProjectStatus.planned,
@@ -31,7 +39,18 @@ class PaintingProject {
     final progress = progressValue is num
         ? progressValue.toDouble().clamp(0.0, 1.0)
         : 0.0;
-
+    final stepRows = map['project_steps'];
+    final stepMaps = stepRows is List
+        ? stepRows.whereType<Map<String, dynamic>>().toList()
+        : <Map<String, dynamic>>[];
+    final completedStepCount = stepMaps
+        .where((step) => step['is_completed'] == true)
+        .length;
+    final status = stepRows is! List || storedStatus == ProjectStatus.completed
+        ? storedStatus
+        : completedStepCount == 0
+        ? ProjectStatus.planned
+        : ProjectStatus.inProgress;
     return PaintingProject(
       id: map['id'] as String?,
       name: map['name'] as String? ?? 'Untitled project',
@@ -40,8 +59,33 @@ class PaintingProject {
       status: status,
       icon: _projectIcon(status),
       colors: _projectColors(status),
+      completedStepCount: completedStepCount,
+      totalStepCount: stepMaps.length,
+      coverPhotoId: map['cover_photo_id'] as String?,
+      coverPhotoUrl: map['cover_photo_url'] as String?,
     );
   }
+
+  PaintingProject copyWith({
+    ProjectStatus? status,
+    int? completedStepCount,
+    int? totalStepCount,
+    String? coverPhotoId,
+    String? coverPhotoUrl,
+    bool clearCover = false,
+  }) => PaintingProject(
+    id: id,
+    name: name,
+    subject: subject,
+    progress: progress,
+    status: status ?? this.status,
+    icon: icon,
+    colors: colors,
+    completedStepCount: completedStepCount ?? this.completedStepCount,
+    totalStepCount: totalStepCount ?? this.totalStepCount,
+    coverPhotoId: clearCover ? null : coverPhotoId ?? this.coverPhotoId,
+    coverPhotoUrl: clearCover ? null : coverPhotoUrl ?? this.coverPhotoUrl,
+  );
 
   Map<String, dynamic> toInsertMap({required String userId}) => {
     'user_id': userId,
@@ -77,6 +121,42 @@ class PaintingProject {
   };
 }
 
+class ProjectPhoto {
+  const ProjectPhoto({
+    required this.id,
+    required this.projectId,
+    required this.storagePath,
+    required this.createdAt,
+    this.projectStepId,
+    this.signedUrl,
+  });
+
+  final String id;
+  final String projectId;
+  final String storagePath;
+  final DateTime createdAt;
+  final String? projectStepId;
+  final String? signedUrl;
+
+  factory ProjectPhoto.fromMap(Map<String, dynamic> map) => ProjectPhoto(
+    id: map['id'] as String,
+    projectId: map['project_id'] as String,
+    storagePath: map['storage_path'] as String,
+    createdAt: DateTime.parse(map['created_at'] as String),
+    projectStepId: map['project_step_id'] as String?,
+    signedUrl: map['signed_url'] as String?,
+  );
+
+  ProjectPhoto withSignedUrl(String url) => ProjectPhoto(
+    id: id,
+    projectId: projectId,
+    storagePath: storagePath,
+    createdAt: createdAt,
+    projectStepId: projectStepId,
+    signedUrl: url,
+  );
+}
+
 class ProjectStep {
   const ProjectStep({
     this.id,
@@ -84,6 +164,8 @@ class ProjectStep {
     required this.stepOrder,
     required this.title,
     required this.instructions,
+    this.isCompleted = false,
+    this.paints = const [],
   });
 
   final String? id;
@@ -91,12 +173,23 @@ class ProjectStep {
   final int stepOrder;
   final String title;
   final String instructions;
+  final bool isCompleted;
+  final List<CatalogPaint> paints;
 
   factory ProjectStep.fromMap(Map<String, dynamic> map) {
     final orderValue = map['step_order'];
     if (orderValue is! num) {
       throw const FormatException('Project step has an invalid order.');
     }
+    final paintRows = map['step_paints'];
+    final paints = paintRows is List
+        ? paintRows
+              .whereType<Map<String, dynamic>>()
+              .map((row) => row['paints'])
+              .whereType<Map<String, dynamic>>()
+              .map(CatalogPaint.fromMap)
+              .toList()
+        : <CatalogPaint>[];
 
     return ProjectStep(
       id: map['id'] as String?,
@@ -104,8 +197,21 @@ class ProjectStep {
       stepOrder: orderValue.toInt(),
       title: map['title'] as String? ?? 'Untitled step',
       instructions: map['instructions'] as String? ?? '',
+      isCompleted: map['is_completed'] as bool? ?? false,
+      paints: paints,
     );
   }
+
+  ProjectStep copyWith({bool? isCompleted, List<CatalogPaint>? paints}) =>
+      ProjectStep(
+        id: id,
+        projectId: projectId,
+        stepOrder: stepOrder,
+        title: title,
+        instructions: instructions,
+        isCompleted: isCompleted ?? this.isCompleted,
+        paints: paints ?? this.paints,
+      );
 
   Map<String, dynamic> toInsertMap() => {
     'project_id': projectId,
@@ -186,6 +292,7 @@ class CatalogPaint {
   const CatalogPaint({
     required this.id,
     required this.name,
+    this.brandName,
     this.paintType,
     this.hexColor,
     this.userStatus = PaintOwnershipStatus.unowned,
@@ -193,6 +300,7 @@ class CatalogPaint {
 
   final String id;
   final String name;
+  final String? brandName;
   final String? paintType;
   final String? hexColor;
   final PaintOwnershipStatus userStatus;
@@ -207,10 +315,14 @@ class CatalogPaint {
     final statusValue = statusRow is Map<String, dynamic>
         ? statusRow['status']
         : null;
+    final brandRow = map['paint_brands'];
 
     return CatalogPaint(
       id: map['id'] as String,
       name: map['name'] as String? ?? 'Unnamed paint',
+      brandName: brandRow is Map<String, dynamic>
+          ? brandRow['name'] as String?
+          : null,
       paintType: map['paint_type'] as String?,
       hexColor: map['hex_color'] as String?,
       userStatus: PaintOwnershipStatus.fromDatabase(statusValue),
@@ -220,6 +332,7 @@ class CatalogPaint {
   CatalogPaint withUserStatus(PaintOwnershipStatus status) => CatalogPaint(
     id: id,
     name: name,
+    brandName: brandName,
     paintType: paintType,
     hexColor: hexColor,
     userStatus: status,
