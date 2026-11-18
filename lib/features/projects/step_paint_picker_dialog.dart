@@ -8,12 +8,14 @@ import 'project_repository.dart';
 class StepPaintPickerDialog extends StatefulWidget {
   const StepPaintPickerDialog({
     super.key,
-    required this.step,
+    required this.stepTitle,
+    required this.selectedPaints,
     required this.paintRepository,
     required this.onSave,
   });
 
-  final ProjectStep step;
+  final String stepTitle;
+  final List<CatalogPaint> selectedPaints;
   final PaintRepository paintRepository;
   final Future<void> Function(List<CatalogPaint> paints) onSave;
 
@@ -33,7 +35,7 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedIds = widget.step.paints.map((paint) => paint.id).toSet();
+    _selectedIds = widget.selectedPaints.map((paint) => paint.id).toSet();
     _loadPaints();
   }
 
@@ -92,7 +94,7 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
     }).toList();
 
     return AlertDialog(
-      title: Text('Paints for ${widget.step.title}'),
+      title: Text('Paints for ${widget.stepTitle}'),
       content: SizedBox(
         width: 440,
         height: MediaQuery.sizeOf(context).height * 0.55,

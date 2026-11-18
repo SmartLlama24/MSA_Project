@@ -1,8 +1,10 @@
 import 'dart:typed_data';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cross_file/cross_file.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:paint_app/app/app_theme.dart';
 import 'package:paint_app/app/app_navigation.dart';
 import 'package:paint_app/data/models.dart';
@@ -14,8 +16,12 @@ import 'package:paint_app/features/paints/paint_repository.dart';
 import 'package:paint_app/features/paints/paints_screen.dart';
 import 'package:paint_app/features/projects/project_details_screen.dart';
 import 'package:paint_app/features/projects/project_photo_repository.dart';
+import 'package:paint_app/features/projects/project_form_dialog.dart';
 import 'package:paint_app/features/projects/project_repository.dart';
 import 'package:paint_app/features/projects/projects_screen.dart';
+import 'package:paint_app/features/schemes/painting_scheme_details_screen.dart';
+import 'package:paint_app/features/schemes/painting_scheme_repository.dart';
+import 'package:paint_app/features/schemes/painting_schemes_screen.dart';
 
 void main() {
   test('project status derives from steps unless marked completed', () {
@@ -60,7 +66,7 @@ void main() {
     expect(manuallyCompleted.status, ProjectStatus.completed);
   });
 
-  testWidgets('shows the four sections and switches between screens', (
+  testWidgets('shows the app sections and switches between screens', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -88,6 +94,7 @@ void main() {
           ),
           paintRepository: _FakePaintRepository(),
           photoRepository: _FakeProjectPhotoRepository(onCoverChanged: (_) {}),
+          schemeRepository: _FakePaintingSchemeRepository(),
         ),
       ),
     );
@@ -110,6 +117,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Citadel'), findsOneWidget);
 
+    await tester.tap(find.text('Schemes'));
+    await tester.pumpAndSettle();
+    expect(find.text('No painting schemes yet'), findsOneWidget);
+
     await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
     expect(find.text('painter@example.com'), findsOneWidget);
@@ -127,6 +138,7 @@ void main() {
           projectRepository: _FakeProjectRepository(),
           paintRepository: _FakePaintRepository(),
           photoRepository: _FakeProjectPhotoRepository(onCoverChanged: (_) {}),
+          schemeRepository: _FakePaintingSchemeRepository(),
         ),
       ),
     );
@@ -139,6 +151,278 @@ void main() {
     expect(find.text('Project name'), findsOneWidget);
     expect(find.text('Miniature or subject'), findsOneWidget);
     expect(find.text('Create project'), findsNWidgets(2));
+  });
+
+  testWidgets('project creation applies a selected painting scheme', (
+    WidgetTester tester,
+  ) async {
+    String? appliedSchemeId;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(
+          body: ProjectFormDialog(
+            schemes: const [
+              PaintingScheme(
+                id: 'scheme-1',
+                name: 'Winter Armour',
+                stepCount: 2,
+              ),
+            ],
+            onSave: (project) async => project,
+            onCreateFromScheme:
+                ({required name, required subject, required schemeId}) async {
+                  appliedSchemeId = schemeId;
+                  return PaintingProject(
+                    id: 'created',
+                    name: name,
+                    subject: subject,
+                    progress: 0,
+                    status: ProjectStatus.planned,
+                    icon: Icons.shield_outlined,
+                    colors: const [Color(0xFF40536B), Color(0xFF202A38)],
+                  );
+                },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'New project');
+    await tester.enterText(find.byType(TextFormField).at(1), 'Knight');
+    await tester.tap(find.text('Choose a painting scheme'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Winter Armour'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create project').last);
+    await tester.pumpAndSettle();
+
+    expect(appliedSchemeId, 'scheme-1');
+  });
+
+  testWidgets(
+    'painting schemes can be created, edited, duplicated and deleted',
+    (WidgetTester tester) async {
+      final repository = _FakePaintingSchemeRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark,
+          home: Scaffold(
+            body: PaintingSchemesScreen(
+              repository: repository,
+              paintRepository: _FakePaintRepository(),
+              previewPicker: DeviceSchemePreviewPicker(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('No painting schemes yet'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Create scheme'));
+      await tester.tap(find.text('Create scheme'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).at(0), 'Forest Guard');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'Muted greens and weathered metal.',
+      );
+      await tester.tap(find.text('Create scheme'));
+      await tester.pumpAndSettle();
+      expect(find.text('Forest Guard'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Scheme actions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'Forest Sentinel',
+      );
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(find.text('Forest Sentinel'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Scheme actions').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Duplicate'));
+      await tester.pumpAndSettle();
+      expect(find.text('Forest Sentinel (copy)'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Scheme actions').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Forest Sentinel'), findsOneWidget);
+      expect(find.text('Forest Sentinel (copy)'), findsNothing);
+    },
+  );
+
+  testWidgets('scheme details show paint ownership status', (
+    WidgetTester tester,
+  ) async {
+    final paint = _testPaint('paint-1', 'Forest Green', '#24552D');
+    final scheme = PaintingScheme(
+      id: 'scheme-status',
+      name: 'Forest Guard',
+      steps: [
+        PaintingSchemeStep(
+          id: 'step-status',
+          schemeId: 'scheme-status',
+          stepOrder: 1,
+          title: 'Basecoat',
+          description: 'Apply the base layer.',
+          paints: [
+            paint.withUserStatus(PaintOwnershipStatus.owned),
+            _testPaint(
+              'paint-2',
+              'Deep Shade',
+              null,
+            ).withUserStatus(PaintOwnershipStatus.wanted),
+            _testPaint('paint-3', 'Highlight', null),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: PaintingSchemeDetailsScreen(
+          scheme: scheme,
+          repository: _FakePaintingSchemeRepository(schemes: [scheme]),
+          paintRepository: _FakePaintRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Owned'), findsOneWidget);
+    expect(find.text('Wanted'), findsOneWidget);
+    expect(find.text('Neither'), findsOneWidget);
+  });
+
+  testWidgets('new scheme steps append after existing steps', (
+    WidgetTester tester,
+  ) async {
+    final scheme = PaintingScheme(
+      id: 'scheme-order',
+      name: 'Order test',
+      steps: [
+        PaintingSchemeStep(
+          id: 'step-early',
+          schemeId: 'scheme-order',
+          stepOrder: 2,
+          title: 'Earlier step',
+          description: '',
+        ),
+        PaintingSchemeStep(
+          id: 'step-late',
+          schemeId: 'scheme-order',
+          stepOrder: 8,
+          title: 'Later step',
+          description: '',
+        ),
+      ],
+    );
+    final repository = _FakePaintingSchemeRepository(schemes: [scheme]);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: PaintingSchemeDetailsScreen(
+          scheme: scheme,
+          repository: repository,
+          paintRepository: _FakePaintRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Add step'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Appended step');
+    await tester.tap(find.text('Save step'));
+    await tester.pumpAndSettle();
+
+    final steps = (await repository.getScheme(scheme.id)).steps;
+    expect(steps.map((step) => step.id), ['step-early', 'step-late', 'step-0']);
+    expect(steps.map((step) => step.stepOrder), [2, 8, 9]);
+  });
+
+  testWidgets('reordering steps persists without reloading scheme details', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final scheme = PaintingScheme(
+      id: 'scheme-reorder',
+      name: 'Reorder test',
+      steps: [
+        for (var index = 0; index < 2; index++)
+          PaintingSchemeStep(
+            id: 'step-$index',
+            schemeId: 'scheme-reorder',
+            stepOrder: index + 1,
+            title: 'Step $index',
+            description: '',
+          ),
+      ],
+    );
+    final repository = _FakePaintingSchemeRepository(schemes: [scheme]);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark,
+        home: MediaQuery(
+          data: const MediaQueryData(
+            gestureSettings: DeviceGestureSettings(touchSlop: 8),
+          ),
+          child: PaintingSchemeDetailsScreen(
+            scheme: scheme,
+            repository: repository,
+            paintRepository: _FakePaintRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> dragFirstDown() async {
+      final firstHandle = tester.getCenter(
+        find.byIcon(Icons.drag_handle).first,
+      );
+      final drag = await tester.startGesture(firstHandle);
+      await tester.pump(const Duration(milliseconds: 500));
+      await drag.moveBy(const Offset(0, 10));
+      await tester.pump();
+      await drag.moveBy(const Offset(0, 90));
+      await tester.pump();
+      await drag.up();
+      await tester.pumpAndSettle();
+    }
+
+    await dragFirstDown();
+
+    expect(repository.reorderStepsCalls, 1);
+    final steps = (await repository.getScheme(scheme.id)).steps;
+    expect(steps.map((step) => step.id), ['step-1', 'step-0']);
+    expect(steps.map((step) => step.stepOrder), [1, 2]);
+    expect(repository.getSchemeCalls, 2);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    repository.reorderError = StateError('save failed');
+    await dragFirstDown();
+
+    expect(
+      find.text('Your session has expired. Sign in again and retry.'),
+      findsOneWidget,
+    );
+    final unchangedSteps = (await repository.getScheme(scheme.id)).steps;
+    expect(unchangedSteps.map((step) => step.id), ['step-1', 'step-0']);
   });
 
   testWidgets('home shows two recent projects and opens their details', (
@@ -168,6 +452,7 @@ void main() {
           projectRepository: _FakeProjectRepository(projects: projects),
           paintRepository: _FakePaintRepository(),
           photoRepository: _FakeProjectPhotoRepository(onCoverChanged: (_) {}),
+          schemeRepository: _FakePaintingSchemeRepository(),
         ),
       ),
     );
@@ -189,7 +474,7 @@ void main() {
 
     await tester.tap(find.text('The Ashen Knight'));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Painting steps'));
     expect(find.text('Painting steps'), findsOneWidget);
@@ -532,6 +817,7 @@ void main() {
           projectRepository: _FakeProjectRepository(projects: [project]),
           paintRepository: _FakePaintRepository(),
           photoRepository: photoRepository,
+          schemeRepository: _FakePaintingSchemeRepository(),
         ),
       ),
     );
@@ -546,6 +832,11 @@ void main() {
   testWidgets('manages ordered painting steps in project details', (
     WidgetTester tester,
   ) async {
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     final project = PaintingProject(
       id: 'project-1',
       name: 'Iron Sentinel',
@@ -560,16 +851,21 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark,
-        home: ProjectDetailsScreen(
-          project: project,
-          repository: repository,
-          paintRepository: _FakePaintRepository(),
+        home: MediaQuery(
+          data: const MediaQueryData(
+            gestureSettings: DeviceGestureSettings(touchSlop: 8),
+          ),
+          child: ProjectDetailsScreen(
+            project: project,
+            repository: repository,
+            paintRepository: _FakePaintRepository(),
+          ),
         ),
       ),
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('No painting steps yet'));
     expect(find.text('Iron Sentinel'), findsNWidgets(2));
@@ -610,12 +906,31 @@ void main() {
     await tester.tap(find.text('Add step').last);
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -600));
+    final firstHandle = find.byIcon(Icons.drag_handle).first;
+    await tester.ensureVisible(firstHandle);
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.widgetWithIcon(IconButton, Icons.keyboard_arrow_up).last,
+    final firstPosition = tester.getCenter(firstHandle);
+    expect(
+      tester
+          .widget<ReorderableDragStartListener>(
+            find.byType(ReorderableDragStartListener).first,
+          )
+          .enabled,
+      isTrue,
     );
+    final drag = await tester.startGesture(firstPosition);
+    await tester.pump(const Duration(milliseconds: 500));
+    await drag.moveBy(const Offset(0, 10));
+    await tester.pump();
+    await drag.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await drag.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await drag.moveBy(const Offset(0, 40));
+    await tester.pump();
+    await drag.up();
     await tester.pumpAndSettle();
+    expect(repository.reorderProjectStepsCalls, 1);
     expect(
       (await repository.getProjectSteps('project-1')).first.title,
       'Basecoat armor',
@@ -718,7 +1033,7 @@ void main() {
     expect(photoRepository.photos, hasLength(2));
     expect(find.byTooltip('Set as project cover'), findsNWidgets(2));
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -500));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -500));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Set as project cover').first);
     await tester.tap(find.byTooltip('Set as project cover').first);
@@ -732,6 +1047,9 @@ void main() {
     final selectedCoverId = photoRepository.photos.last.id;
     expect(projectRepository.coverPhotoId, selectedCoverId);
 
+    await tester.ensureVisible(find.byTooltip('Delete picture').last);
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 100));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Delete picture').last);
     await tester.tap(find.byTooltip('Delete picture').last);
     await tester.pumpAndSettle();
@@ -747,7 +1065,7 @@ void main() {
     await pumpDetails();
     expect(find.byTooltip('Project cover'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Add progress photo'));
     await tester.tap(find.text('Add progress photo'));
@@ -898,11 +1216,11 @@ void main() {
       0,
     );
 
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox).first);
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 900));
     await tester.pumpAndSettle();
     expect(find.text('1/2'), findsOneWidget);
     expect(find.text('In progress'), findsOneWidget);
@@ -914,18 +1232,16 @@ void main() {
           .value,
       0.5,
     );
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     expect(
       (await repository.getProjectSteps('project-steps')).first.isCompleted,
       isTrue,
     );
-    await tester.tap(find.text('Prime armor'));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -500));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(TextButton, 'Add paints'));
-    await tester.tap(find.widgetWithText(TextButton, 'Add paints'));
+    await tester.ensureVisible(
+      find.widgetWithText(TextButton, 'Add paints').first,
+    );
+    await tester.tap(find.widgetWithText(TextButton, 'Add paints').first);
     await tester.pumpAndSettle();
     expect(find.text('Mephiston Red'), findsOneWidget);
     expect(paints.statuses, isEmpty);
@@ -940,21 +1256,20 @@ void main() {
           .id,
       'red',
     );
-    expect(find.text('Mephiston Red · Citadel'), findsOneWidget);
+    expect(find.text('Mephiston Red'), findsOneWidget);
+    expect(find.text('Citadel'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await pumpDetails();
     expect(find.text('1/2'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     expect(tester.widget<Checkbox>(find.byType(Checkbox).first).value, isTrue);
-    await tester.tap(find.text('Prime armor'));
-    await tester.pumpAndSettle();
-    expect(find.text('Mephiston Red · Citadel'), findsOneWidget);
+    expect(find.text('Mephiston Red'), findsOneWidget);
 
     await tester.tap(find.byType(Checkbox).first);
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).first, const Offset(0, 900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 900));
     await tester.pumpAndSettle();
     expect(find.text('0/2'), findsOneWidget);
     expect(find.text('Planned'), findsOneWidget);
@@ -965,7 +1280,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await pumpDetails();
     expect(find.text('0/2'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -900));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
     expect(tester.widget<Checkbox>(find.byType(Checkbox).first).value, isFalse);
   });
@@ -973,6 +1288,198 @@ void main() {
 
 CatalogPaint _testPaint(String id, String name, String? hexColor) =>
     CatalogPaint(id: id, name: name, hexColor: hexColor);
+
+class _FakePaintingSchemeRepository implements PaintingSchemeRepository {
+  _FakePaintingSchemeRepository({List<PaintingScheme>? schemes})
+    : schemes = schemes ?? [];
+
+  final List<PaintingScheme> schemes;
+  final Map<String, List<PaintingSchemeStep>> _steps = {};
+  int _nextSchemeId = 0;
+  int _nextStepId = 0;
+  int getSchemeCalls = 0;
+  int reorderStepsCalls = 0;
+  Object? reorderError;
+
+  @override
+  Future<List<PaintingScheme>> getSchemes() async => [
+    for (final scheme in schemes)
+      scheme.copyWith(
+        steps: const [],
+        stepCount: _steps[scheme.id]?.length ?? scheme.steps.length,
+      ),
+  ];
+
+  @override
+  Future<PaintingScheme> getScheme(String schemeId) async {
+    getSchemeCalls++;
+    final scheme = schemes.firstWhere((scheme) => scheme.id == schemeId);
+    final steps = _steps.putIfAbsent(schemeId, () => [...scheme.steps]);
+    steps.sort((first, second) => first.stepOrder.compareTo(second.stepOrder));
+    return scheme.copyWith(steps: [...steps]);
+  }
+
+  @override
+  Future<PaintingScheme> createScheme({
+    required String name,
+    String? description,
+    XFile? previewImage,
+  }) async {
+    final scheme = PaintingScheme(
+      id: 'scheme-${_nextSchemeId++}',
+      name: name,
+      description: description,
+    );
+    schemes.add(scheme);
+    return scheme;
+  }
+
+  @override
+  Future<PaintingScheme> updateScheme({
+    required PaintingScheme scheme,
+    required String name,
+    String? description,
+    XFile? previewImage,
+    bool removePreview = false,
+  }) async {
+    final updated = scheme.copyWith(
+      name: name,
+      description: description,
+      clearDescription: description?.trim().isEmpty ?? true,
+    );
+    schemes[schemes.indexWhere((item) => item.id == scheme.id)] = updated;
+    return updated;
+  }
+
+  @override
+  Future<void> deleteScheme(PaintingScheme scheme) async {
+    schemes.removeWhere((item) => item.id == scheme.id);
+    _steps.remove(scheme.id);
+  }
+
+  @override
+  Future<PaintingScheme> duplicateScheme(PaintingScheme scheme) async {
+    final original = await getScheme(scheme.id);
+    final copy = PaintingScheme(
+      id: 'scheme-${_nextSchemeId++}',
+      name: '${original.name} (copy)',
+      description: original.description,
+    );
+    schemes.add(copy);
+    _steps[copy.id] = [
+      for (final step in original.steps)
+        PaintingSchemeStep(
+          id: 'step-${_nextStepId++}',
+          schemeId: copy.id,
+          stepOrder: step.stepOrder,
+          title: step.title,
+          description: step.description,
+          paints: step.paints,
+        ),
+    ];
+    return copy;
+  }
+
+  @override
+  Future<PaintingSchemeStep> createStep({
+    required String schemeId,
+    required String title,
+    required String description,
+  }) async {
+    final steps = _steps.putIfAbsent(
+      schemeId,
+      () => [...schemes.firstWhere((scheme) => scheme.id == schemeId).steps],
+    );
+    final maxOrder = steps.fold<int>(
+      0,
+      (maximum, step) => maximum > step.stepOrder ? maximum : step.stepOrder,
+    );
+    final step = PaintingSchemeStep(
+      id: 'step-${_nextStepId++}',
+      schemeId: schemeId,
+      stepOrder: maxOrder + 1,
+      title: title,
+      description: description,
+    );
+    steps.add(step);
+    steps.sort((first, second) => first.stepOrder.compareTo(second.stepOrder));
+    return step;
+  }
+
+  @override
+  Future<void> updateStep(PaintingSchemeStep step) async {
+    final steps = _steps[step.schemeId]!;
+    final index = steps.indexWhere((item) => item.id == step.id);
+    steps[index] = step;
+  }
+
+  @override
+  Future<void> deleteStep(PaintingSchemeStep step) async {
+    final steps = _steps.putIfAbsent(
+      step.schemeId,
+      () => [
+        ...schemes.firstWhere((scheme) => scheme.id == step.schemeId).steps,
+      ],
+    );
+    steps.removeWhere((item) => item.id == step.id);
+    await reorderSteps(step.schemeId, steps.map((step) => step.id).toList());
+  }
+
+  @override
+  Future<void> setStepPaints(
+    PaintingSchemeStep step,
+    List<CatalogPaint> paints,
+  ) async {
+    final steps = _steps.putIfAbsent(
+      step.schemeId,
+      () => [
+        ...schemes.firstWhere((scheme) => scheme.id == step.schemeId).steps,
+      ],
+    );
+    final index = steps.indexWhere((item) => item.id == step.id);
+    final existing = steps[index];
+    steps[index] = PaintingSchemeStep(
+      id: existing.id,
+      schemeId: existing.schemeId,
+      stepOrder: existing.stepOrder,
+      title: existing.title,
+      description: existing.description,
+      paints: paints,
+    );
+  }
+
+  @override
+  Future<void> reorderSteps(
+    String schemeId,
+    List<String> orderedStepIds,
+  ) async {
+    reorderStepsCalls++;
+    if (reorderError != null) throw reorderError!;
+    final steps = _steps.putIfAbsent(
+      schemeId,
+      () => [...schemes.firstWhere((scheme) => scheme.id == schemeId).steps],
+    );
+    final byId = {for (final step in steps) step.id: step};
+    _steps[schemeId] = [
+      for (var index = 0; index < orderedStepIds.length; index++)
+        PaintingSchemeStep(
+          id: byId[orderedStepIds[index]]!.id,
+          schemeId: schemeId,
+          stepOrder: index + 1,
+          title: byId[orderedStepIds[index]]!.title,
+          description: byId[orderedStepIds[index]]!.description,
+          paints: byId[orderedStepIds[index]]!.paints,
+        ),
+    ];
+  }
+
+  @override
+  Future<String> createProjectFromScheme({
+    required String name,
+    required String subject,
+    required String schemeId,
+  }) => Future.error(UnsupportedError('Not used in this test.'));
+}
 
 class _FakeAuthService implements AuthService {
   const _FakeAuthService();
@@ -1001,6 +1508,7 @@ class _FakeProjectRepository implements ProjectRepository {
   int _nextId = 0;
   int _nextStepId = 0;
   String? coverPhotoId;
+  int reorderProjectStepsCalls = 0;
   final Map<String, List<ProjectStep>> stepsByProject = {};
 
   @override
@@ -1119,6 +1627,7 @@ class _FakeProjectRepository implements ProjectRepository {
     String projectId,
     List<String> orderedStepIds,
   ) async {
+    reorderProjectStepsCalls++;
     final steps = stepsByProject[projectId]!;
     final stepsById = {for (final step in steps) step.id!: step};
     stepsByProject[projectId] = [

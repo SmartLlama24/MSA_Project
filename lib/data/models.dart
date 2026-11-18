@@ -157,6 +157,129 @@ class ProjectPhoto {
   );
 }
 
+class PaintingScheme {
+  const PaintingScheme({
+    required this.id,
+    required this.name,
+    this.description,
+    this.previewStoragePath,
+    this.previewUrl,
+    this.steps = const [],
+    this.stepCount,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+  final String? previewStoragePath;
+  final String? previewUrl;
+  final List<PaintingSchemeStep> steps;
+  final int? stepCount;
+
+  factory PaintingScheme.fromMap(Map<String, dynamic> map) => PaintingScheme(
+    id: map['id'] as String,
+    name: map['name'] as String,
+    description: map['description'] as String?,
+    previewStoragePath: map['preview_storage_path'] as String?,
+    steps: (map['painting_scheme_steps'] as List? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(PaintingSchemeStep.fromMap)
+        .toList(),
+  );
+
+  PaintingScheme withPreviewUrl(String? url) => PaintingScheme(
+    id: id,
+    name: name,
+    description: description,
+    previewStoragePath: previewStoragePath,
+    previewUrl: url,
+    steps: steps,
+    stepCount: stepCount,
+  );
+
+  PaintingScheme copyWith({
+    String? name,
+    String? description,
+    String? previewStoragePath,
+    String? previewUrl,
+    List<PaintingSchemeStep>? steps,
+    int? stepCount,
+    bool clearDescription = false,
+    bool clearPreview = false,
+  }) => PaintingScheme(
+    id: id,
+    name: name ?? this.name,
+    description: clearDescription ? null : description ?? this.description,
+    previewStoragePath: clearPreview
+        ? null
+        : previewStoragePath ?? this.previewStoragePath,
+    previewUrl: clearPreview ? null : previewUrl ?? this.previewUrl,
+    steps: steps ?? this.steps,
+    stepCount: stepCount ?? this.stepCount,
+  );
+
+  Map<String, dynamic> toInsertMap({required String userId}) => {
+    'user_id': userId,
+    'name': name.trim(),
+    'description': _trimOrNull(description),
+  };
+
+  Map<String, dynamic> toUpdateMap() => {
+    'name': name.trim(),
+    'description': _trimOrNull(description),
+  };
+}
+
+class PaintingSchemeStep {
+  const PaintingSchemeStep({
+    required this.id,
+    required this.schemeId,
+    required this.stepOrder,
+    required this.title,
+    required this.description,
+    this.paints = const [],
+  });
+
+  final String id;
+  final String schemeId;
+  final int stepOrder;
+  final String title;
+  final String description;
+  final List<CatalogPaint> paints;
+
+  factory PaintingSchemeStep.fromMap(Map<String, dynamic> map) =>
+      PaintingSchemeStep(
+        id: map['id'] as String,
+        schemeId: map['scheme_id'] as String,
+        stepOrder: (map['step_order'] as num).toInt(),
+        title: map['title'] as String,
+        description: map['description'] as String? ?? '',
+        paints: (map['painting_scheme_step_paints'] as List? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map((row) => row['paints'])
+            .whereType<Map<String, dynamic>>()
+            .map(CatalogPaint.fromMap)
+            .toList(),
+      );
+
+  Map<String, dynamic> toInsertMap() => {
+    'scheme_id': schemeId,
+    'step_order': stepOrder,
+    'title': title.trim(),
+    'description': description.trim(),
+  };
+
+  Map<String, dynamic> toUpdateMap() => {
+    'title': title.trim(),
+    'description': description.trim(),
+  };
+}
+
+String? _trimOrNull(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
+}
+
 class ProjectStep {
   const ProjectStep({
     this.id,

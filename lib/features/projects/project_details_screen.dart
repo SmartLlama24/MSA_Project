@@ -35,6 +35,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   late PaintingProject _project;
   List<ProjectStep> _steps = [];
   bool _isLoading = true;
+  bool _isReorderingSteps = false;
   String? _error;
   final Set<String> _updatingSteps = {};
   List<ProjectPhoto> _photos = [];
@@ -147,30 +148,57 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     if (updated != null) await _loadProject();
   }
 
-  Future<void> _moveStep(int index, int direction) async {
+  Future<void> _reorderSteps(int oldIndex, int newIndex) async {
     final projectId = _projectId;
-    if (projectId == null) return;
+    if (projectId == null ||
+        _isReorderingSteps ||
+        oldIndex < 0 ||
+        oldIndex >= _steps.length ||
+        newIndex < 0 ||
+        newIndex >= _steps.length ||
+        oldIndex == newIndex) {
+      return;
+    }
 
+    final originalSteps = _steps;
     final reorderedSteps = [..._steps];
-    final targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= reorderedSteps.length) return;
-    final movedStep = reorderedSteps.removeAt(index);
-    reorderedSteps.insert(targetIndex, movedStep);
-    final orderedStepIds = reorderedSteps.map((step) => step.id).toList();
+    final movedStep = reorderedSteps.removeAt(oldIndex);
+    // onReorderItem already adjusts newIndex when moving an item downward.
+    reorderedSteps.insert(newIndex, movedStep);
+    final orderedSteps = [
+      for (var index = 0; index < reorderedSteps.length; index++)
+        ProjectStep(
+          id: reorderedSteps[index].id,
+          projectId: reorderedSteps[index].projectId,
+          stepOrder: index + 1,
+          title: reorderedSteps[index].title,
+          instructions: reorderedSteps[index].instructions,
+          isCompleted: reorderedSteps[index].isCompleted,
+          paints: reorderedSteps[index].paints,
+        ),
+    ];
+    final orderedStepIds = orderedSteps.map((step) => step.id).toList();
     if (orderedStepIds.any((id) => id == null)) {
       _showError('Could not reorder a step without a saved ID.');
       return;
     }
 
+    setState(() {
+      _isReorderingSteps = true;
+      _steps = orderedSteps;
+    });
     try {
       await widget.repository.reorderProjectSteps(
         projectId,
         orderedStepIds.whereType<String>().toList(),
       );
-      await _loadProject();
     } catch (error) {
-      _showError(projectDetailsErrorMessage(error));
-      await _loadProject();
+      if (mounted) {
+        setState(() => _steps = originalSteps);
+        _showError(projectDetailsErrorMessage(error));
+      }
+    } finally {
+      if (mounted) setState(() => _isReorderingSteps = false);
     }
   }
 
@@ -211,7 +239,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (_) => StepPaintPickerDialog(
-        step: step,
+        stepTitle: step.title,
+        selectedPaints: step.paints,
         paintRepository: widget.paintRepository,
         onSave: (paints) =>
             widget.repository.setProjectStepPaints(step, paints),
@@ -460,69 +489,82 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
           : RefreshIndicator(
               onRefresh: _loadProject,
               color: AppTheme.accent,
-              child: ListView(
+              child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _buildProjectSummary(status),
-                  const SizedBox(height: 18),
-                  _buildReferencePhotos(),
-                  const SizedBox(height: 26),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Painting steps',
-                          style: Theme.of(context).textTheme.titleLarge,
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildProjectSummary(status),
+                        const SizedBox(height: 18),
+                        _buildReferencePhotos(),
+                        const SizedBox(height: 26),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Painting steps',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                            ),
+                            FilledButton.icon(
+                              onPressed: _addStep,
+                              icon: const Icon(Icons.add),
+                              label: const Text('Add step'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppTheme.accent,
+                                foregroundColor: const Color(0xFF201B12),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      FilledButton.icon(
-                        onPressed: _addStep,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add step'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppTheme.accent,
-                          foregroundColor: const Color(0xFF201B12),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Drag to reorder. Use the checkbox to track progress.',
+                          style: TextStyle(color: AppTheme.mutedText),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 14),
+                        if (_steps.isEmpty) _buildEmptySteps(),
+                      ]),
+                    ),
                   ),
-                  const SizedBox(height: 14),
-                  if (_steps.isEmpty)
-                    _buildEmptySteps()
-                  else
-                    ..._steps.asMap().entries.map(
-                      (entry) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _StepCard(
-                          step: entry.value,
-                          stepNumber: entry.key + 1,
-                          canMoveUp: entry.key > 0,
-                          canMoveDown: entry.key < _steps.length - 1,
-                          onMoveUp: () => _moveStep(entry.key, -1),
-                          onMoveDown: () => _moveStep(entry.key, 1),
-                          onEdit: () => _editStep(entry.value),
-                          onDelete: () => _deleteStep(entry.value),
-                          onToggleCompleted: (isCompleted) =>
-                              _toggleStep(entry.value, isCompleted),
-                          isUpdating: _updatingSteps.contains(entry.value.id),
-                          onManagePaints: () => _manageStepPaints(entry.value),
-                          photos: _photos
-                              .where(
-                                (photo) =>
-                                    photo.projectStepId == entry.value.id,
-                              )
-                              .toList(),
-                          isUploadingPhotos: _uploadingStepPhotos.contains(
-                            entry.value.id,
-                          ),
-                          onAddPhoto: () =>
-                              _choosePhotos(projectStepId: entry.value.id),
-                          onPhotoTap: _openPhoto,
-                          onPhotoDelete: _deletePhoto,
-                        ),
+                  if (_steps.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      sliver: SliverReorderableList(
+                        itemCount: _steps.length,
+                        onReorderItem: _reorderSteps,
+                        itemBuilder: (context, index) {
+                          final step = _steps[index];
+                          return _StepCard(
+                            key: ValueKey(step.id ?? 'unsaved-$index'),
+                            step: step,
+                            stepNumber: index + 1,
+                            canReorder: !_isReorderingSteps && step.id != null,
+                            onEdit: () => _editStep(step),
+                            onDelete: () => _deleteStep(step),
+                            onToggleCompleted: (isCompleted) =>
+                                _toggleStep(step, isCompleted),
+                            isUpdating: _updatingSteps.contains(step.id),
+                            onManagePaints: () => _manageStepPaints(step),
+                            photos: _photos
+                                .where(
+                                  (photo) => photo.projectStepId == step.id,
+                                )
+                                .toList(),
+                            isUploadingPhotos: _uploadingStepPhotos.contains(
+                              step.id,
+                            ),
+                            onAddPhoto: () =>
+                                _choosePhotos(projectStepId: step.id),
+                            onPhotoTap: _openPhoto,
+                            onPhotoDelete: _deletePhoto,
+                          );
+                        },
                       ),
                     ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
                 ],
               ),
             ),
@@ -945,14 +987,12 @@ class _StepPhotoPreview extends StatelessWidget {
   );
 }
 
-class _StepCard extends StatefulWidget {
+class _StepCard extends StatelessWidget {
   const _StepCard({
+    super.key,
     required this.step,
     required this.stepNumber,
-    required this.canMoveUp,
-    required this.canMoveDown,
-    required this.onMoveUp,
-    required this.onMoveDown,
+    required this.canReorder,
     required this.onEdit,
     required this.onDelete,
     required this.onToggleCompleted,
@@ -967,10 +1007,7 @@ class _StepCard extends StatefulWidget {
 
   final ProjectStep step;
   final int stepNumber;
-  final bool canMoveUp;
-  final bool canMoveDown;
-  final VoidCallback onMoveUp;
-  final VoidCallback onMoveDown;
+  final bool canReorder;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggleCompleted;
@@ -983,203 +1020,152 @@ class _StepCard extends StatefulWidget {
   final ValueChanged<ProjectPhoto> onPhotoDelete;
 
   @override
-  State<_StepCard> createState() => _StepCardState();
-}
-
-class _StepCardState extends State<_StepCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-    ),
-    child: Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Checkbox(
-              value: widget.step.isCompleted,
-              onChanged: widget.isUpdating
-                  ? null
-                  : (value) {
-                      if (value != null) widget.onToggleCompleted(value);
-                    },
-              visualDensity: VisualDensity.compact,
-            ),
-            Container(
-              width: 34,
-              height: 34,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppTheme.elevatedSurface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                '${widget.stepNumber}',
-                style: const TextStyle(
-                  color: AppTheme.accent,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: InkWell(
-                onTap: () => setState(() => _isExpanded = !_isExpanded),
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.step.title,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(widget.step.instructions),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        _isExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: AppTheme.mutedText,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            PopupMenuButton<String>(
-              tooltip: 'Step actions',
-              onSelected: (action) {
-                if (action == 'edit') widget.onEdit();
-                if (action == 'delete') widget.onDelete();
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(value: 'edit', child: Text('Edit')),
-                PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
-            ),
-            Column(
-              children: [
-                IconButton(
-                  tooltip: 'Move step up',
-                  onPressed: widget.canMoveUp ? widget.onMoveUp : null,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.keyboard_arrow_up),
-                ),
-                IconButton(
-                  tooltip: 'Move step down',
-                  onPressed: widget.canMoveDown ? widget.onMoveDown : null,
-                  visualDensity: VisualDensity.compact,
-                  icon: const Icon(Icons.keyboard_arrow_down),
-                ),
-              ],
-            ),
-          ],
-        ),
-        if (widget.photos.isNotEmpty || widget.isUploadingPhotos)
-          SizedBox(
-            height: 64,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                for (final photo in widget.photos)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: _StepPhotoPreview(
-                      photo: photo,
-                      onTap: () => widget.onPhotoTap(photo),
-                      onDelete: () => widget.onPhotoDelete(photo),
-                    ),
-                  ),
-                if (widget.isUploadingPhotos)
-                  const SizedBox(
-                    width: 56,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.accent,
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  )
-                else
-                  TextButton.icon(
-                    onPressed: widget.onAddPhoto,
-                    icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                    label: const Text('Add photo'),
-                  ),
-              ],
-            ),
-          )
-        else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: widget.onAddPhoto,
-              icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-              label: const Text('Add progress photo'),
-            ),
-          ),
-        if (_isExpanded) ...[
-          const Divider(height: 20),
+  Widget build(BuildContext context) => Card(
+    key: key,
+    margin: const EdgeInsets.only(bottom: 12),
+    color: AppTheme.surface,
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Expanded(
-                child: Text(
-                  'Associated paints',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+              Checkbox(
+                value: step.isCompleted,
+                onChanged: isUpdating
+                    ? null
+                    : (value) {
+                        if (value != null) onToggleCompleted(value);
+                      },
+                visualDensity: VisualDensity.compact,
+              ),
+              ReorderableDragStartListener(
+                index: stepNumber - 1,
+                enabled: canReorder,
+                child: const Icon(Icons.drag_handle, color: AppTheme.mutedText),
+              ),
+              const SizedBox(width: 8),
+              CircleAvatar(
+                radius: 15,
+                backgroundColor: AppTheme.elevatedSurface,
+                child: Text('$stepNumber'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      step.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (step.instructions.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(step.instructions),
+                    ],
+                  ],
                 ),
               ),
-              TextButton.icon(
-                onPressed: widget.onManagePaints,
-                icon: const Icon(Icons.palette_outlined, size: 18),
-                label: Text(widget.step.paints.isEmpty ? 'Add paints' : 'Edit'),
+              PopupMenuButton<String>(
+                tooltip: 'Step actions',
+                onSelected: (action) {
+                  if (action == 'edit') onEdit();
+                  if (action == 'delete') onDelete();
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  PopupMenuItem(value: 'delete', child: Text('Delete')),
+                ],
               ),
             ],
           ),
-          if (widget.step.paints.isEmpty)
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Text(
-                  'No paints associated with this step.',
-                  style: TextStyle(color: AppTheme.mutedText),
-                ),
+          if (photos.isNotEmpty || isUploadingPhotos)
+            SizedBox(
+              height: 64,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final photo in photos)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: _StepPhotoPreview(
+                        photo: photo,
+                        onTap: () => onPhotoTap(photo),
+                        onDelete: () => onPhotoDelete(photo),
+                      ),
+                    ),
+                  if (isUploadingPhotos)
+                    const SizedBox(
+                      width: 56,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.accent,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: onAddPhoto,
+                      icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                      label: const Text('Add photo'),
+                    ),
+                ],
               ),
             )
           else
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: widget.step.paints.map((paint) {
-                  final color = paint.color;
-                  return Chip(
-                    avatar: color == null
-                        ? null
-                        : CircleAvatar(backgroundColor: color),
-                    label: Text(
-                      '${paint.name} · ${paint.brandName ?? 'Unknown brand'}',
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onAddPhoto,
+                icon: const Icon(Icons.add_a_photo_outlined, size: 18),
+                label: const Text('Add progress photo'),
               ),
             ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  step.paints.isEmpty ? 'No paints associated' : 'Paints',
+                  style: const TextStyle(
+                    color: AppTheme.mutedText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onManagePaints,
+                icon: const Icon(Icons.palette_outlined, size: 18),
+                label: Text(step.paints.isEmpty ? 'Add paints' : 'Edit paints'),
+              ),
+            ],
+          ),
+          for (final paint in step.paints)
+            ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: _paintSwatch(paint),
+              title: Text(paint.name),
+              subtitle: Text(paint.brandName ?? 'Unknown brand'),
+            ),
         ],
-      ],
+      ),
     ),
+  );
+
+  Widget _paintSwatch(CatalogPaint paint) => Container(
+    width: 30,
+    height: 30,
+    decoration: BoxDecoration(
+      color: paint.color ?? AppTheme.elevatedSurface,
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white24),
+    ),
+    child: paint.color == null
+        ? const Icon(Icons.palette_outlined, size: 16)
+        : null,
   );
 }

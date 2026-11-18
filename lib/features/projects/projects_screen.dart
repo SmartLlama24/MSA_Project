@@ -8,6 +8,7 @@ import 'project_details_screen.dart';
 import 'project_form_dialog.dart';
 import 'project_photo_repository.dart';
 import 'project_repository.dart';
+import '../schemes/painting_scheme_repository.dart';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({
@@ -15,11 +16,13 @@ class ProjectsScreen extends StatefulWidget {
     this.repository,
     this.paintRepository,
     this.photoRepository,
+    this.schemeRepository,
   });
 
   final ProjectRepository? repository;
   final PaintRepository? paintRepository;
   final ProjectPhotoRepository? photoRepository;
+  final PaintingSchemeRepository? schemeRepository;
 
   @override
   ProjectsScreenState createState() => ProjectsScreenState();
@@ -78,9 +81,38 @@ class ProjectsScreenState extends State<ProjectsScreen> {
   }
 
   Future<void> openCreateProject() async {
+    final schemeRepository = widget.schemeRepository;
+    var schemes = <PaintingScheme>[];
+    if (schemeRepository != null) {
+      try {
+        schemes = await schemeRepository.getSchemes();
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(paintingSchemeErrorMessage(error))),
+          );
+        }
+      }
+    }
+    if (!mounted) return;
     final project = await showDialog<PaintingProject>(
       context: context,
-      builder: (_) => ProjectFormDialog(onSave: _repository.createProject),
+      builder: (_) => ProjectFormDialog(
+        onSave: _repository.createProject,
+        schemes: schemes,
+        loadScheme: schemeRepository?.getScheme,
+        onCreateFromScheme: schemeRepository == null
+            ? null
+            : ({required name, required subject, required schemeId}) async {
+                final projectId = await schemeRepository
+                    .createProjectFromScheme(
+                      name: name,
+                      subject: subject,
+                      schemeId: schemeId,
+                    );
+                return _repository.getProject(projectId);
+              },
+      ),
     );
     if (project != null) await _loadProjects();
   }

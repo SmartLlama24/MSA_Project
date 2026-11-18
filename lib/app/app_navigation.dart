@@ -10,6 +10,8 @@ import '../features/projects/project_details_screen.dart';
 import '../features/projects/project_photo_repository.dart';
 import '../features/projects/project_repository.dart';
 import '../features/projects/projects_screen.dart';
+import '../features/schemes/painting_scheme_repository.dart';
+import '../features/schemes/painting_schemes_screen.dart';
 
 class AppNavigation extends StatefulWidget {
   const AppNavigation({
@@ -19,6 +21,8 @@ class AppNavigation extends StatefulWidget {
     this.projectRepository,
     this.paintRepository,
     this.photoRepository,
+    this.schemeRepository,
+    this.schemePreviewPicker,
   });
 
   final String email;
@@ -26,6 +30,8 @@ class AppNavigation extends StatefulWidget {
   final ProjectRepository? projectRepository;
   final PaintRepository? paintRepository;
   final ProjectPhotoRepository? photoRepository;
+  final PaintingSchemeRepository? schemeRepository;
+  final SchemePreviewPicker? schemePreviewPicker;
 
   @override
   State<AppNavigation> createState() => _AppNavigationState();
@@ -38,6 +44,8 @@ class _AppNavigationState extends State<AppNavigation> {
   late final ProjectPhotoRepository _photoRepository;
   final _homeKey = GlobalKey<HomeScreenState>();
   final _projectsKey = GlobalKey<ProjectsScreenState>();
+  late final PaintingSchemeRepository _schemeRepository;
+  late final SchemePreviewPicker _schemePreviewPicker;
 
   @override
   void initState() {
@@ -51,6 +59,11 @@ class _AppNavigationState extends State<AppNavigation> {
     _photoRepository =
         widget.photoRepository ??
         SupabaseProjectPhotoRepository(Supabase.instance.client);
+    _schemeRepository =
+        widget.schemeRepository ??
+        SupabasePaintingSchemeRepository(Supabase.instance.client);
+    _schemePreviewPicker =
+        widget.schemePreviewPicker ?? DeviceSchemePreviewPicker();
   }
 
   void _selectTab(int index) {
@@ -94,8 +107,14 @@ class _AppNavigationState extends State<AppNavigation> {
         repository: _projectRepository,
         paintRepository: _paintRepository,
         photoRepository: _photoRepository,
+        schemeRepository: _schemeRepository,
       ),
       PaintsScreen(repository: _paintRepository),
+      PaintingSchemesScreen(
+        repository: _schemeRepository,
+        paintRepository: _paintRepository,
+        previewPicker: _schemePreviewPicker,
+      ),
       ProfileScreen(email: widget.email, onLogout: widget.onLogout),
     ];
 
@@ -119,6 +138,11 @@ class _AppNavigationState extends State<AppNavigation> {
             icon: Icon(Icons.palette_outlined),
             selectedIcon: Icon(Icons.palette),
             label: 'Paints',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined),
+            selectedIcon: Icon(Icons.auto_awesome),
+            label: 'Schemes',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
