@@ -24,6 +24,22 @@ import 'package:paint_app/features/schemes/painting_scheme_repository.dart';
 import 'package:paint_app/features/schemes/painting_schemes_screen.dart';
 
 void main() {
+  test('project reads its latest step completion event', () {
+    final project = PaintingProject.fromMap({
+      'id': 'completion-project',
+      'name': 'Completion project',
+      'subject': 'Miniature',
+      'progress': 0,
+      'status': 'in_progress',
+      'last_step_completed_at': '2026-11-18T12:00:00Z',
+      'project_steps': [
+        {'is_completed': false},
+      ],
+    });
+
+    expect(project.lastStepCompletedAt, DateTime.parse('2026-11-18T12:00:00Z'));
+  });
+
   test('project status derives from steps unless marked completed', () {
     final noSteps = PaintingProject.fromMap({
       'name': 'Unstarted Miniature',
@@ -429,7 +445,7 @@ void main() {
     expect(unchangedSteps.map((step) => step.id), ['step-1', 'step-0']);
   });
 
-  testWidgets('home shows two recent projects and opens their details', (
+  testWidgets('home shows current and two recent projects', (
     WidgetTester tester,
   ) async {
     final projects = [
@@ -444,6 +460,11 @@ void main() {
           colors: entry.value.colors,
           completedStepCount: entry.key == 0 ? 2 : 0,
           totalStepCount: entry.key == 0 ? 5 : 0,
+          lastStepCompletedAt: switch (entry.key) {
+            0 => DateTime(2026, 11, 17),
+            1 => DateTime(2026, 11, 18),
+            _ => null,
+          },
         ),
       ),
     ];
@@ -467,16 +488,17 @@ void main() {
     expect(find.text('The Gilded Wyrm'), findsNothing);
     expect(find.text('2/5'), findsOneWidget);
     expect(find.text('0/0'), findsOneWidget);
-    expect(find.text('40% complete'), findsOneWidget);
+    expect(find.text('0% complete'), findsOneWidget);
     final recentProgressBars = tester
         .widgetList<LinearProgressIndicator>(
           find.byType(LinearProgressIndicator),
         )
         .toList();
-    expect(recentProgressBars[0].value, 0.4);
-    expect(recentProgressBars[1].value, 0);
+    expect(recentProgressBars, hasLength(2));
+    expect(recentProgressBars[0].value, 0);
+    expect(recentProgressBars[1].value, 0.4);
 
-    await tester.tap(find.text('The Ashen Knight'));
+    await tester.tap(find.text('Mossback Guardian'));
     await tester.pumpAndSettle();
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
@@ -486,7 +508,11 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('The Ashen Knight'), findsOneWidget);
+    expect(find.text('Mossback Guardian'), findsOneWidget);
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
+    await tester.pumpAndSettle();
+    expect(find.text('The Gilded Wyrm'), findsOneWidget);
   });
 
   testWidgets('shows brand paints and filters the selected brand', (
@@ -1524,8 +1550,27 @@ class _FakeProjectRepository implements ProjectRepository {
   Future<List<PaintingProject>> getProjects() async => [...projects];
 
   @override
-  Future<List<PaintingProject>> getRecentProjects() async =>
-      projects.take(2).toList();
+  Future<List<PaintingProject>> getRecentProjects() async {
+    if (projects.isEmpty) return [];
+    final completedProjects =
+        projects
+            .where((project) => project.lastStepCompletedAt != null)
+            .toList()
+          ..sort(
+            (first, second) => second.lastStepCompletedAt!.compareTo(
+              first.lastStepCompletedAt!,
+            ),
+          );
+    final featuredProject = completedProjects.isEmpty
+        ? projects.first
+        : completedProjects.first;
+    return [
+      featuredProject,
+      ...projects
+          .where((project) => !identical(project, featuredProject))
+          .take(2),
+    ];
+  }
 
   @override
   Future<PaintingProject> getProject(String projectId) async {

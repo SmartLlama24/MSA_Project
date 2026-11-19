@@ -15,6 +15,7 @@ class PaintingProject {
     this.totalStepCount = 0,
     this.coverPhotoId,
     this.coverPhotoUrl,
+    this.lastStepCompletedAt,
   });
 
   final String? id;
@@ -28,6 +29,7 @@ class PaintingProject {
   final int totalStepCount;
   final String? coverPhotoId;
   final String? coverPhotoUrl;
+  final DateTime? lastStepCompletedAt;
 
   factory PaintingProject.fromMap(Map<String, dynamic> map) {
     final storedStatus = switch (map['status']) {
@@ -46,6 +48,12 @@ class PaintingProject {
     final completedStepCount = stepMaps
         .where((step) => step['is_completed'] == true)
         .length;
+    final lastCompletionValue = map['last_step_completed_at'];
+    final lastStepCompletedAt = lastCompletionValue is DateTime
+        ? lastCompletionValue
+        : lastCompletionValue is String
+        ? DateTime.tryParse(lastCompletionValue)
+        : null;
     final status = stepRows is! List || storedStatus == ProjectStatus.completed
         ? storedStatus
         : completedStepCount == 0
@@ -63,6 +71,7 @@ class PaintingProject {
       totalStepCount: stepMaps.length,
       coverPhotoId: map['cover_photo_id'] as String?,
       coverPhotoUrl: map['cover_photo_url'] as String?,
+      lastStepCompletedAt: lastStepCompletedAt,
     );
   }
 
@@ -72,6 +81,7 @@ class PaintingProject {
     int? totalStepCount,
     String? coverPhotoId,
     String? coverPhotoUrl,
+    DateTime? lastStepCompletedAt,
     bool clearCover = false,
   }) => PaintingProject(
     id: id,
@@ -85,6 +95,7 @@ class PaintingProject {
     totalStepCount: totalStepCount ?? this.totalStepCount,
     coverPhotoId: clearCover ? null : coverPhotoId ?? this.coverPhotoId,
     coverPhotoUrl: clearCover ? null : coverPhotoUrl ?? this.coverPhotoUrl,
+    lastStepCompletedAt: lastStepCompletedAt ?? this.lastStepCompletedAt,
   );
 
   Map<String, dynamic> toInsertMap({required String userId}) => {

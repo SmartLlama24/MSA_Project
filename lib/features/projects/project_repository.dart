@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/models.dart';
@@ -80,16 +81,52 @@ class SupabaseProjectRepository implements ProjectRepository {
   @override
   Future<List<PaintingProject>> getRecentProjects() async {
     final userId = _userId;
-    final rows = await _client
-        .from('projects')
-        .select(
-          'id, name, subject, status, progress, cover_photo_id, '
-          'project_steps(is_completed)',
-        )
-        .eq('user_id', userId)
-        .order('updated_at', ascending: false)
-        .limit(2);
-    return rows.map(PaintingProject.fromMap).toList();
+    late final List<Map<String, dynamic>> rows;
+    try {
+      rows = await _client
+          .from('projects')
+          .select(
+            'id, name, subject, status, progress, cover_photo_id, '
+            'last_step_completed_at, project_steps(is_completed)',
+          )
+          .eq('user_id', userId)
+          .order('updated_at', ascending: false);
+    } on PostgrestException catch (error) {
+      if (error.code != '42703' && error.code != 'PGRST204') rethrow;
+
+      debugPrint(
+        '[Projects] last_step_completed_at is unavailable; '
+        'apply the latest Supabase migration to prioritize completed projects.',
+      );
+      rows = await _client
+          .from('projects')
+          .select(
+            'id, name, subject, status, progress, cover_photo_id, '
+            'project_steps(is_completed)',
+          )
+          .eq('user_id', userId)
+          .order('updated_at', ascending: false);
+    }
+    final projects = rows.map(PaintingProject.fromMap).toList();
+    if (projects.isEmpty) return projects;
+
+    var featuredProjectIndex = 0;
+    for (var index = 1; index < projects.length; index++) {
+      final candidateTime = projects[index].lastStepCompletedAt;
+      final featuredTime = projects[featuredProjectIndex].lastStepCompletedAt;
+      if (candidateTime != null &&
+          (featuredTime == null || candidateTime.isAfter(featuredTime))) {
+        featuredProjectIndex = index;
+      }
+    }
+
+    final featuredProject = projects[featuredProjectIndex];
+    return [
+      featuredProject,
+      ...projects
+          .where((project) => !identical(project, featuredProject))
+          .take(2),
+    ];
   }
 
   @override
