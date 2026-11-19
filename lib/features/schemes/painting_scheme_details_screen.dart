@@ -190,7 +190,9 @@ class _PaintingSchemeDetailsScreenState
       label: const Text('Add step'),
     ),
     body: _isLoading
-        ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+        ? Center(
+            child: CircularProgressIndicator(color: context.appPalette.accent),
+          )
         : _error != null
         ? Center(
             child: Padding(
@@ -245,9 +247,9 @@ class _PaintingSchemeDetailsScreenState
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Drag to reorder. Paint ownership is shown for reference only.',
-                  style: TextStyle(color: AppTheme.mutedText),
+                  style: TextStyle(color: context.appPalette.mutedText),
                 ),
               ],
             ),
@@ -284,10 +286,14 @@ class _PaintingSchemeDetailsScreenState
     height: 190,
     width: double.infinity,
     decoration: BoxDecoration(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(20),
     ),
-    child: const Icon(Icons.palette_outlined, color: AppTheme.accent, size: 44),
+    child: Icon(
+      Icons.palette_outlined,
+      color: context.appPalette.accent,
+      size: 44,
+    ),
   );
 }
 
@@ -313,7 +319,7 @@ class _SchemeStepCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     key: key,
     margin: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-    color: AppTheme.surface,
+    color: context.appPalette.surface,
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -324,12 +330,15 @@ class _SchemeStepCard extends StatelessWidget {
               ReorderableDragStartListener(
                 index: index,
                 enabled: canReorder,
-                child: const Icon(Icons.drag_handle, color: AppTheme.mutedText),
+                child: Icon(
+                  Icons.drag_handle,
+                  color: context.appPalette.mutedText,
+                ),
               ),
               const SizedBox(width: 8),
               CircleAvatar(
                 radius: 15,
-                backgroundColor: AppTheme.elevatedSurface,
+                backgroundColor: context.appPalette.elevatedSurface,
                 child: Text('${index + 1}'),
               ),
               const SizedBox(width: 10),

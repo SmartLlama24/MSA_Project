@@ -99,8 +99,8 @@ class _PaintsScreenState extends State<PaintsScreen> {
 
   Widget _buildBrands() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.accent),
+      return Center(
+        child: CircularProgressIndicator(color: context.appPalette.accent),
       );
     }
 
@@ -111,7 +111,10 @@ class _PaintsScreenState extends State<PaintsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_outlined, color: AppTheme.mutedText),
+              Icon(
+                Icons.cloud_off_outlined,
+                color: context.appPalette.mutedText,
+              ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 12),
@@ -127,13 +130,17 @@ class _PaintsScreenState extends State<PaintsScreen> {
     }
 
     if (_brands.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.palette_outlined, color: AppTheme.accent, size: 42),
+              Icon(
+                Icons.palette_outlined,
+                color: context.appPalette.accent,
+                size: 42,
+              ),
               SizedBox(height: 16),
               Text(
                 'No paint brands yet',
@@ -143,7 +150,7 @@ class _PaintsScreenState extends State<PaintsScreen> {
               Text(
                 'Brands will appear here once paints are available in the catalog.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.mutedText),
+                style: TextStyle(color: context.appPalette.mutedText),
               ),
             ],
           ),
@@ -158,13 +165,13 @@ class _PaintsScreenState extends State<PaintsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text(
               _logoError!,
-              style: const TextStyle(color: AppTheme.mutedText),
+              style: TextStyle(color: context.appPalette.mutedText),
             ),
           ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadBrands,
-            color: AppTheme.accent,
+            color: context.appPalette.accent,
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
@@ -198,7 +205,7 @@ class _BrandCard extends StatelessWidget {
     final color = brand.color;
 
     return Material(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
@@ -207,7 +214,7 @@ class _BrandCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Row(
             children: [
@@ -215,11 +222,9 @@ class _BrandCard extends StatelessWidget {
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
-                  color: color ?? AppTheme.elevatedSurface,
+                  color: color ?? context.appPalette.elevatedSurface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12),
-                  ),
+                  border: Border.all(color: context.appPalette.border),
                 ),
                 child: brand.logoUrl == null
                     ? null
@@ -234,11 +239,14 @@ class _BrandCard extends StatelessWidget {
                               progress == null
                               ? child
                               : ColoredBox(
-                                  color: color ?? AppTheme.elevatedSurface,
+                                  color:
+                                      color ??
+                                      context.appPalette.elevatedSurface,
                                 ),
                           errorBuilder: (context, error, stackTrace) =>
                               ColoredBox(
-                                color: color ?? AppTheme.elevatedSurface,
+                                color:
+                                    color ?? context.appPalette.elevatedSurface,
                               ),
                         ),
                       ),
@@ -255,9 +263,9 @@ class _BrandCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios,
-                color: AppTheme.mutedText,
+                color: context.appPalette.mutedText,
                 size: 15,
               ),
             ],

@@ -64,7 +64,7 @@ class _PaintStatusSheetState extends State<PaintStatusSheet> {
                 width: 38,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppTheme.mutedText.withValues(alpha: 0.5),
+                  color: context.appPalette.mutedText.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -76,7 +76,7 @@ class _PaintStatusSheetState extends State<PaintStatusSheet> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: color ?? AppTheme.elevatedSurface,
+                    color: color ?? context.appPalette.elevatedSurface,
                     borderRadius: BorderRadius.circular(14),
                   ),
                 ),
@@ -93,7 +93,7 @@ class _PaintStatusSheetState extends State<PaintStatusSheet> {
                         const SizedBox(height: 4),
                         Text(
                           type,
-                          style: const TextStyle(color: AppTheme.mutedText),
+                          style: TextStyle(color: context.appPalette.mutedText),
                         ),
                       ],
                     ],
@@ -115,7 +115,7 @@ class _PaintStatusSheetState extends State<PaintStatusSheet> {
             ),
             if (_isSaving) ...[
               const SizedBox(height: 18),
-              const LinearProgressIndicator(color: AppTheme.accent),
+              LinearProgressIndicator(color: context.appPalette.accent),
             ],
             if (_error != null) ...[
               const SizedBox(height: 14),
@@ -135,10 +135,12 @@ class _PaintStatusSheetState extends State<PaintStatusSheet> {
       label: Text(label),
       selected: _status == status,
       onSelected: _isSaving ? null : (_) => _save(status),
-      selectedColor: AppTheme.accent,
-      backgroundColor: AppTheme.surface,
+      selectedColor: context.appPalette.accent,
+      backgroundColor: context.appPalette.surface,
       labelStyle: TextStyle(
-        color: _status == status ? const Color(0xFF201B12) : AppTheme.mutedText,
+        color: _status == status
+            ? context.appPalette.onAccent
+            : context.appPalette.mutedText,
         fontWeight: FontWeight.w600,
       ),
       side: BorderSide.none,

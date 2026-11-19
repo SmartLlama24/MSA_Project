@@ -220,8 +220,8 @@ class ProjectsScreenState extends State<ProjectsScreen> {
                   onPressed: openCreateProject,
                   icon: const Icon(Icons.add),
                   style: IconButton.styleFrom(
-                    foregroundColor: AppTheme.accent,
-                    backgroundColor: AppTheme.surface,
+                    foregroundColor: context.appPalette.accent,
+                    backgroundColor: context.appPalette.surface,
                   ),
                 ),
               ],
@@ -235,8 +235,8 @@ class ProjectsScreenState extends State<ProjectsScreen> {
 
   Widget _buildProjectList() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.accent),
+      return Center(
+        child: CircularProgressIndicator(color: context.appPalette.accent),
       );
     }
 
@@ -247,7 +247,10 @@ class ProjectsScreenState extends State<ProjectsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_outlined, color: AppTheme.mutedText),
+              Icon(
+                Icons.cloud_off_outlined,
+                color: context.appPalette.mutedText,
+              ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 12),
@@ -274,12 +277,12 @@ class ProjectsScreenState extends State<ProjectsScreen> {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: context.appPalette.surface,
                     borderRadius: BorderRadius.circular(22),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.brush_outlined,
-                    color: AppTheme.accent,
+                    color: context.appPalette.accent,
                     size: 32,
                   ),
                 ),
@@ -299,8 +302,8 @@ class ProjectsScreenState extends State<ProjectsScreen> {
                   icon: const Icon(Icons.add),
                   label: const Text('Create project'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
-                    foregroundColor: const Color(0xFF201B12),
+                    backgroundColor: context.appPalette.accent,
+                    foregroundColor: context.appPalette.onAccent,
                   ),
                 ),
               ],
@@ -312,7 +315,7 @@ class ProjectsScreenState extends State<ProjectsScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadProjects,
-      color: AppTheme.accent,
+      color: context.appPalette.accent,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
@@ -362,7 +365,7 @@ class _ProjectCard extends StatelessWidget {
         : project.completedStepCount / project.totalStepCount;
 
     return Material(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -370,7 +373,7 @@ class _ProjectCard extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.subtleBorder),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,8 +494,8 @@ class _ProjectCard extends StatelessWidget {
                         const Spacer(),
                         Text(
                           '${(stepProgress * 100).round()}%',
-                          style: const TextStyle(
-                            color: AppTheme.accent,
+                          style: TextStyle(
+                            color: context.appPalette.accent,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
@@ -500,8 +503,8 @@ class _ProjectCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           '${project.completedStepCount}/${project.totalStepCount}',
-                          style: const TextStyle(
-                            color: AppTheme.mutedText,
+                          style: TextStyle(
+                            color: context.appPalette.mutedText,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
@@ -514,8 +517,8 @@ class _ProjectCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: stepProgress,
                         minHeight: 5,
-                        backgroundColor: AppTheme.elevatedSurface,
-                        color: AppTheme.accent,
+                        backgroundColor: context.appPalette.elevatedSurface,
+                        color: context.appPalette.accent,
                       ),
                     ),
                   ],
@@ -539,13 +542,13 @@ class _StatusLabel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: AppTheme.elevatedSurface,
+        color: context.appPalette.elevatedSurface,
         borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
         status,
-        style: const TextStyle(
-          color: AppTheme.mutedText,
+        style: TextStyle(
+          color: context.appPalette.mutedText,
           fontSize: 9,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.8,

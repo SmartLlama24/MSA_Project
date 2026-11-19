@@ -257,7 +257,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
     }
     final fromCamera = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appPalette.surface,
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
@@ -482,14 +482,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.accent),
+          ? Center(
+              child: CircularProgressIndicator(
+                color: context.appPalette.accent,
+              ),
             )
           : _error != null
           ? _buildError()
           : RefreshIndicator(
               onRefresh: _loadProject,
-              color: AppTheme.accent,
+              color: context.appPalette.accent,
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
@@ -514,16 +516,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                               icon: const Icon(Icons.add),
                               label: const Text('Add step'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppTheme.accent,
-                                foregroundColor: const Color(0xFF201B12),
+                                backgroundColor: context.appPalette.accent,
+                                foregroundColor: context.appPalette.onAccent,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Drag to reorder. Use the checkbox to track progress.',
-                          style: TextStyle(color: AppTheme.mutedText),
+                          style: TextStyle(color: context.appPalette.mutedText),
                         ),
                         const SizedBox(height: 14),
                         if (_steps.isEmpty) _buildEmptySteps(),
@@ -578,7 +580,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_outlined, color: AppTheme.mutedText),
+          Icon(Icons.cloud_off_outlined, color: context.appPalette.mutedText),
           const SizedBox(height: 12),
           Text(_error!, textAlign: TextAlign.center),
           const SizedBox(height: 12),
@@ -623,14 +625,14 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 22),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: context.appPalette.surface,
               borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
               children: [
-                const Icon(
+                Icon(
                   Icons.collections_outlined,
-                  color: AppTheme.accent,
+                  color: context.appPalette.accent,
                   size: 32,
                 ),
                 const SizedBox(height: 8),
@@ -639,9 +641,9 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Add reference pictures for this project.',
-                  style: TextStyle(color: AppTheme.mutedText),
+                  style: TextStyle(color: context.appPalette.mutedText),
                 ),
                 TextButton.icon(
                   onPressed: widget.photoRepository == null
@@ -666,8 +668,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 referencePhotos.length + (_isUploadingReferencePhotos ? 1 : 0),
             itemBuilder: (context, index) {
               if (index == referencePhotos.length) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppTheme.accent),
+                return Center(
+                  child: CircularProgressIndicator(
+                    color: context.appPalette.accent,
+                  ),
                 );
               }
               final photo = referencePhotos[index];
@@ -688,7 +692,10 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
               _project.coverPhotoId == null
                   ? 'Choose a picture to use as the project cover.'
                   : 'The star marks this project’s cover picture.',
-              style: const TextStyle(color: AppTheme.mutedText, fontSize: 12),
+              style: TextStyle(
+                color: context.appPalette.mutedText,
+                fontSize: 12,
+              ),
             ),
           ),
       ],
@@ -776,7 +783,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
       Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appPalette.surface,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -788,8 +795,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                 Text(status, style: Theme.of(context).textTheme.titleMedium),
                 Text(
                   '${_steps.where((step) => step.isCompleted).length}/${_steps.length}',
-                  style: const TextStyle(
-                    color: AppTheme.accent,
+                  style: TextStyle(
+                    color: context.appPalette.accent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -804,8 +811,8 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
                     : _steps.where((step) => step.isCompleted).length /
                           _steps.length,
                 minHeight: 7,
-                backgroundColor: AppTheme.elevatedSurface,
-                color: AppTheme.accent,
+                backgroundColor: context.appPalette.elevatedSurface,
+                color: context.appPalette.accent,
               ),
             ),
           ],
@@ -817,12 +824,16 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
   Widget _buildEmptySteps() => Container(
     padding: const EdgeInsets.all(24),
     decoration: BoxDecoration(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(20),
     ),
-    child: const Column(
+    child: Column(
       children: [
-        Icon(Icons.format_list_numbered, color: AppTheme.accent, size: 36),
+        Icon(
+          Icons.format_list_numbered,
+          color: context.appPalette.accent,
+          size: 36,
+        ),
         SizedBox(height: 12),
         Text(
           'No painting steps yet',
@@ -832,7 +843,7 @@ class _ProjectDetailsScreenState extends State<ProjectDetailsScreen> {
         Text(
           'Add your first step to plan this miniature’s painting process.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.mutedText),
+          style: TextStyle(color: context.appPalette.mutedText),
         ),
       ],
     ),
@@ -861,7 +872,7 @@ class _ProjectPhotoTile extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         Material(
-          color: AppTheme.elevatedSurface,
+          color: context.appPalette.elevatedSurface,
           child: InkWell(
             onTap: onTap,
             child: photo.signedUrl == null
@@ -946,7 +957,7 @@ class _StepPhotoPreview extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           Material(
-            color: AppTheme.elevatedSurface,
+            color: context.appPalette.elevatedSurface,
             child: InkWell(
               onTap: onTap,
               child: photo.signedUrl == null
@@ -1026,7 +1037,7 @@ class _StepCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
     key: key,
     margin: const EdgeInsets.only(bottom: 8),
-    color: AppTheme.surface,
+    color: context.appPalette.surface,
     child: Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -1038,9 +1049,9 @@ class _StepCard extends StatelessWidget {
               ReorderableDragStartListener(
                 index: stepNumber - 1,
                 enabled: canReorder,
-                child: const Icon(
+                child: Icon(
                   Icons.drag_handle,
-                  color: AppTheme.mutedText,
+                  color: context.appPalette.mutedText,
                   size: 20,
                 ),
               ),
@@ -1050,16 +1061,16 @@ class _StepCard extends StatelessWidget {
                 height: 26,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppTheme.accent.withValues(alpha: 0.12),
+                  color: context.appPalette.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: AppTheme.accent.withValues(alpha: 0.28),
+                    color: context.appPalette.accent.withValues(alpha: 0.28),
                   ),
                 ),
                 child: Text(
                   '$stepNumber',
-                  style: const TextStyle(
-                    color: AppTheme.accent,
+                  style: TextStyle(
+                    color: context.appPalette.accent,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -1133,8 +1144,10 @@ class _StepCard extends StatelessWidget {
               padding: const EdgeInsets.only(left: 41, top: 4),
               child: Text(
                 step.instructions,
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(color: AppTheme.mutedText, height: 1.35),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.appPalette.mutedText,
+                  height: 1.35,
+                ),
               ),
             ),
           if (photos.isNotEmpty || isUploadingPhotos)
@@ -1144,19 +1157,19 @@ class _StepCard extends StatelessWidget {
                 top: step.instructions.isEmpty ? 8 : 6,
               ),
               child: photos.isEmpty
-                  ? const Row(
+                  ? Row(
                       children: [
                         Icon(
                           Icons.photo_camera_outlined,
                           size: 16,
-                          color: AppTheme.mutedText,
+                          color: context.appPalette.mutedText,
                         ),
                         SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Adding progress photo',
                             style: TextStyle(
-                              color: AppTheme.mutedText,
+                              color: context.appPalette.mutedText,
                               fontSize: 12,
                             ),
                           ),
@@ -1165,7 +1178,7 @@ class _StepCard extends StatelessWidget {
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                            color: AppTheme.accent,
+                            color: context.appPalette.accent,
                             strokeWidth: 2,
                           ),
                         ),
@@ -1175,16 +1188,16 @@ class _StepCard extends StatelessWidget {
                       height: 44,
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.photo_camera_outlined,
                             size: 16,
-                            color: AppTheme.mutedText,
+                            color: context.appPalette.mutedText,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             '${photos.length}',
-                            style: const TextStyle(
-                              color: AppTheme.mutedText,
+                            style: TextStyle(
+                              color: context.appPalette.mutedText,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1204,11 +1217,11 @@ class _StepCard extends StatelessWidget {
                                     ),
                                   ),
                                 if (isUploadingPhotos)
-                                  const SizedBox(
+                                  SizedBox(
                                     width: 40,
                                     child: Center(
                                       child: CircularProgressIndicator(
-                                        color: AppTheme.accent,
+                                        color: context.appPalette.accent,
                                         strokeWidth: 2,
                                       ),
                                     ),

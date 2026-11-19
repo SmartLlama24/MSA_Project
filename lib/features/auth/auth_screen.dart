@@ -108,15 +108,15 @@ class _AuthScreenState extends State<AuthScreen> {
                     height: 58,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: context.appPalette.surface,
                       borderRadius: BorderRadius.circular(19),
                       border: Border.all(
-                        color: AppTheme.accent.withValues(alpha: 0.3),
+                        color: context.appPalette.accent.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.brush_outlined,
-                      color: AppTheme.accent,
+                      color: context.appPalette.accent,
                       size: 29,
                     ),
                   ),
@@ -124,7 +124,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   Text(
                     'PAINTBENCH',
                     style: TextStyle(
-                      color: AppTheme.accent,
+                      color: context.appPalette.accent,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 2.2,
@@ -218,7 +218,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             _feedback!,
                             style: TextStyle(
                               color: _isSuccess
-                                  ? AppTheme.accent
+                                  ? context.appPalette.accent
                                   : Theme.of(context).colorScheme.error,
                             ),
                           ),
@@ -229,16 +229,16 @@ class _AuthScreenState extends State<AuthScreen> {
                           child: FilledButton(
                             onPressed: _isLoading ? null : _submit,
                             style: FilledButton.styleFrom(
-                              backgroundColor: AppTheme.accent,
-                              foregroundColor: const Color(0xFF201B12),
+                              backgroundColor: context.appPalette.accent,
+                              foregroundColor: context.appPalette.onAccent,
                             ),
                             child: _isLoading
-                                ? const SizedBox(
+                                ? SizedBox(
                                     width: 22,
                                     height: 22,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: Color(0xFF201B12),
+                                      color: context.appPalette.onAccent,
                                     ),
                                   )
                                 : Text(
@@ -277,18 +277,18 @@ class _AuthScreenState extends State<AuthScreen> {
       labelText: label,
       prefixIcon: Icon(icon),
       filled: true,
-      fillColor: AppTheme.surface,
+      fillColor: context.appPalette.surface,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.06)),
+        borderSide: BorderSide(color: context.appPalette.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: AppTheme.accent),
+        borderSide: BorderSide(color: context.appPalette.accent),
       ),
     );
   }

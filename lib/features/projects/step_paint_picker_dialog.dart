@@ -117,7 +117,7 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
                         icon: const Icon(Icons.close),
                       ),
                 filled: true,
-                fillColor: AppTheme.surface,
+                fillColor: context.appPalette.surface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide.none,
@@ -137,16 +137,16 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
         FilledButton(
           onPressed: _isSaving || _isLoading || _error != null ? null : _save,
           style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.accent,
-            foregroundColor: const Color(0xFF201B12),
+            backgroundColor: context.appPalette.accent,
+            foregroundColor: context.appPalette.onAccent,
           ),
           child: _isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF201B12),
+                    color: context.appPalette.onAccent,
                   ),
                 )
               : const Text('Save paints'),
@@ -157,8 +157,8 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
 
   Widget _buildPaintList(List<CatalogPaint> paints) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.accent),
+      return Center(
+        child: CircularProgressIndicator(color: context.appPalette.accent),
       );
     }
     if (_error != null) {
@@ -212,7 +212,7 @@ class _StepPaintPickerDialogState extends State<StepPaintPickerDialog> {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
+                    border: Border.all(color: context.appPalette.border),
                   ),
                 ),
         );

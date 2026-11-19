@@ -89,7 +89,7 @@ class HomeScreenState extends State<HomeScreen> {
                     Text(
                       'PAINTBENCH  /  YOUR WORKSPACE',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppTheme.accent,
+                        color: context.appPalette.accent,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.25,
                       ),
@@ -106,13 +106,13 @@ class HomeScreenState extends State<HomeScreen> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: AppTheme.elevatedSurface,
+                  color: context.appPalette.elevatedSurface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.subtleBorder),
+                  border: Border.all(color: context.appPalette.border),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.brush_outlined,
-                  color: AppTheme.accent,
+                  color: context.appPalette.accent,
                   size: 21,
                 ),
               ),
@@ -122,10 +122,12 @@ class HomeScreenState extends State<HomeScreen> {
           const _SectionHeading(title: 'CURRENT PROJECT'),
           const SizedBox(height: 8),
           if (_isLoadingProjects)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 54),
               child: Center(
-                child: CircularProgressIndicator(color: AppTheme.accent),
+                child: CircularProgressIndicator(
+                  color: context.appPalette.accent,
+                ),
               ),
             )
           else if (_projectsError != null)
@@ -164,9 +166,9 @@ class HomeScreenState extends State<HomeScreen> {
           else if (!_isLoadingProjects &&
               _projectsError == null &&
               currentProject != null)
-            const Text(
+            Text(
               'Your next miniature starts here.',
-              style: TextStyle(color: AppTheme.mutedText),
+              style: TextStyle(color: context.appPalette.mutedText),
             ),
           const SizedBox(height: 24),
           const _SectionHeading(title: 'QUICK ACCESS'),
@@ -221,7 +223,7 @@ class _SectionHeading extends StatelessWidget {
               Text(
                 title,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppTheme.primaryText,
+                  color: context.appPalette.primaryText,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.0,
                 ),
@@ -245,14 +247,14 @@ class _ProjectLoadError extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: AppTheme.surface,
-      border: Border.all(color: AppTheme.subtleBorder),
+      color: context.appPalette.surface,
+      border: Border.all(color: context.appPalette.border),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(message, style: const TextStyle(color: AppTheme.mutedText)),
+        Text(message, style: TextStyle(color: context.appPalette.mutedText)),
         TextButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh),
@@ -272,13 +274,13 @@ class _EmptyWorkbench extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: AppTheme.subtleBorder),
+      border: Border.all(color: context.appPalette.border),
     ),
     child: Row(
       children: [
-        const Icon(Icons.model_training_outlined, color: AppTheme.accent),
+        Icon(Icons.model_training_outlined, color: context.appPalette.accent),
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -289,9 +291,9 @@ class _EmptyWorkbench extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Start a project to track your next miniature.',
-                style: TextStyle(color: AppTheme.mutedText),
+                style: TextStyle(color: context.appPalette.mutedText),
               ),
             ],
           ),
@@ -299,7 +301,7 @@ class _EmptyWorkbench extends StatelessWidget {
         IconButton(
           onPressed: onCreateProject,
           tooltip: 'New project',
-          color: AppTheme.accent,
+          color: context.appPalette.accent,
           icon: const Icon(Icons.add),
         ),
       ],
@@ -320,7 +322,7 @@ class _CurrentProjectFeature extends StatelessWidget {
         : project.completedStepCount / project.totalStepCount;
 
     return Material(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(14),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -328,7 +330,7 @@ class _CurrentProjectFeature extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.subtleBorder),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -410,8 +412,8 @@ class _CurrentProjectFeature extends StatelessWidget {
                             children: [
                               Text(
                                 '${(progress * 100).round()}% complete',
-                                style: const TextStyle(
-                                  color: AppTheme.accent,
+                                style: TextStyle(
+                                  color: context.appPalette.accent,
                                   fontWeight: FontWeight.w700,
                                   fontSize: 13,
                                 ),
@@ -422,8 +424,9 @@ class _CurrentProjectFeature extends StatelessWidget {
                                 child: LinearProgressIndicator(
                                   value: progress,
                                   minHeight: 5,
-                                  backgroundColor: AppTheme.elevatedSurface,
-                                  color: AppTheme.accent,
+                                  backgroundColor:
+                                      context.appPalette.elevatedSurface,
+                                  color: context.appPalette.accent,
                                 ),
                               ),
                             ],
@@ -432,8 +435,8 @@ class _CurrentProjectFeature extends StatelessWidget {
                         const SizedBox(width: 14),
                         Text(
                           '${project.completedStepCount}/${project.totalStepCount}',
-                          style: const TextStyle(
-                            color: AppTheme.mutedText,
+                          style: TextStyle(
+                            color: context.appPalette.mutedText,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -547,7 +550,7 @@ class ProjectPreviewCard extends StatelessWidget {
         ? 0.0
         : project.completedStepCount / project.totalStepCount;
     return Material(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -556,7 +559,7 @@ class ProjectPreviewCard extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.subtleBorder),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Row(
             children: [
@@ -592,8 +595,8 @@ class ProjectPreviewCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 4,
-                        backgroundColor: AppTheme.elevatedSurface,
-                        color: AppTheme.accent,
+                        backgroundColor: context.appPalette.elevatedSurface,
+                        color: context.appPalette.accent,
                       ),
                     ),
                   ],
@@ -602,8 +605,8 @@ class ProjectPreviewCard extends StatelessWidget {
               const SizedBox(width: 12),
               Text(
                 '${project.completedStepCount}/${project.totalStepCount}',
-                style: const TextStyle(
-                  color: AppTheme.accent,
+                style: TextStyle(
+                  color: context.appPalette.accent,
                   fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
@@ -641,17 +644,21 @@ class _QuickAccess extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: highlighted ? AppTheme.elevatedSurface : AppTheme.surface,
+              color: highlighted
+                  ? context.appPalette.elevatedSurface
+                  : context.appPalette.surface,
               border: Border.all(
                 color: highlighted
-                    ? AppTheme.accent.withValues(alpha: 0.38)
-                    : AppTheme.subtleBorder,
+                    ? context.appPalette.accent.withValues(alpha: 0.38)
+                    : context.appPalette.border,
               ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
-              color: highlighted ? AppTheme.accent : AppTheme.primaryText,
+              color: highlighted
+                  ? context.appPalette.accent
+                  : context.appPalette.primaryText,
               size: 22,
             ),
           ),
@@ -660,8 +667,8 @@ class _QuickAccess extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             maxLines: 2,
-            style: const TextStyle(
-              color: AppTheme.mutedText,
+            style: TextStyle(
+              color: context.appPalette.mutedText,
               fontSize: 10,
               height: 1.2,
             ),

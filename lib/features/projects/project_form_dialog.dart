@@ -181,16 +181,16 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
         FilledButton(
           onPressed: _isSaving ? null : _save,
           style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.accent,
-            foregroundColor: const Color(0xFF201B12),
+            backgroundColor: context.appPalette.accent,
+            foregroundColor: context.appPalette.onAccent,
           ),
           child: _isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF201B12),
+                    color: context.appPalette.onAccent,
                   ),
                 )
               : Text(_isEditing ? 'Save changes' : 'Create project'),
@@ -202,7 +202,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
   InputDecoration _decoration(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppTheme.surface,
+    fillColor: context.appPalette.surface,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide.none,
@@ -235,7 +235,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: context.appPalette.surface,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Row(
@@ -252,7 +252,7 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
                       ),
                       Text(
                         '${selected.stepCount ?? selected.steps.length} steps',
-                        style: const TextStyle(color: AppTheme.mutedText),
+                        style: TextStyle(color: context.appPalette.mutedText),
                       ),
                     ],
                   ),
@@ -411,15 +411,18 @@ class _ProjectFormDialogState extends State<ProjectFormDialog> {
       width: size,
       height: size,
       child: url == null
-          ? const ColoredBox(
-              color: AppTheme.elevatedSurface,
-              child: Icon(Icons.palette_outlined, color: AppTheme.accent),
+          ? ColoredBox(
+              color: context.appPalette.elevatedSurface,
+              child: Icon(
+                Icons.palette_outlined,
+                color: context.appPalette.accent,
+              ),
             )
           : Image.network(
               url,
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => const ColoredBox(
-                color: AppTheme.elevatedSurface,
+              errorBuilder: (_, _, _) => ColoredBox(
+                color: context.appPalette.elevatedSurface,
                 child: Icon(Icons.broken_image_outlined),
               ),
             ),

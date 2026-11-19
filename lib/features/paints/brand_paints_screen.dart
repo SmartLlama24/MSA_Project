@@ -78,7 +78,7 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.background,
+      backgroundColor: context.appPalette.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -130,7 +130,7 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
                           icon: const Icon(Icons.close),
                         ),
                   filled: true,
-                  fillColor: AppTheme.surface,
+                  fillColor: context.appPalette.surface,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -215,10 +215,12 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
       label: Text(label),
       selected: _filter == filter,
       onSelected: (_) => setState(() => _filter = filter),
-      selectedColor: AppTheme.accent,
-      backgroundColor: AppTheme.surface,
+      selectedColor: context.appPalette.accent,
+      backgroundColor: context.appPalette.surface,
       labelStyle: TextStyle(
-        color: _filter == filter ? const Color(0xFF201B12) : AppTheme.mutedText,
+        color: _filter == filter
+            ? context.appPalette.onAccent
+            : context.appPalette.mutedText,
         fontWeight: FontWeight.w600,
       ),
       side: BorderSide.none,
@@ -228,8 +230,8 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
 
   Widget _buildPaintList(List<CatalogPaint> filtered) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.accent),
+      return Center(
+        child: CircularProgressIndicator(color: context.appPalette.accent),
       );
     }
 
@@ -260,9 +262,9 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.format_paint_outlined,
-                color: AppTheme.accent,
+                color: context.appPalette.accent,
                 size: 40,
               ),
               const SizedBox(height: 14),
@@ -272,10 +274,10 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'This brand does not have any catalog paints yet.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.mutedText),
+                style: TextStyle(color: context.appPalette.mutedText),
               ),
             ],
           ),
@@ -284,17 +286,17 @@ class _BrandPaintsScreenState extends State<BrandPaintsScreen> {
     }
 
     if (filtered.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'No paints match this search and filter.',
-          style: TextStyle(color: AppTheme.mutedText),
+          style: TextStyle(color: context.appPalette.mutedText),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadPaints,
-      color: AppTheme.accent,
+      color: context.appPalette.accent,
       child: ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
@@ -333,13 +335,13 @@ class _PaintTile extends StatelessWidget {
     ];
 
     final statusColor = switch (paint.userStatus) {
-      PaintOwnershipStatus.owned => AppTheme.accent,
+      PaintOwnershipStatus.owned => context.appPalette.accent,
       PaintOwnershipStatus.wanted => const Color(0xFFB7A58B),
-      PaintOwnershipStatus.unowned => AppTheme.mutedText,
+      PaintOwnershipStatus.unowned => context.appPalette.mutedText,
     };
 
     return Material(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
@@ -348,7 +350,7 @@ class _PaintTile extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.subtleBorder),
+            border: Border.all(color: context.appPalette.border),
           ),
           child: Row(
             children: [
@@ -356,11 +358,9 @@ class _PaintTile extends StatelessWidget {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: color ?? AppTheme.elevatedSurface,
+                  color: color ?? context.appPalette.elevatedSurface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.16),
-                  ),
+                  border: Border.all(color: context.appPalette.border),
                 ),
                 alignment: Alignment.bottomRight,
                 child: Container(
@@ -372,7 +372,10 @@ class _PaintTile extends StatelessWidget {
                       topLeft: Radius.circular(7),
                       bottomRight: Radius.circular(7),
                     ),
-                    border: Border.all(color: AppTheme.surface, width: 2),
+                    border: Border.all(
+                      color: context.appPalette.surface,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
@@ -390,7 +393,7 @@ class _PaintTile extends StatelessWidget {
                       Text(
                         subtitleParts.join('  ·  '),
                         style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: AppTheme.mutedText),
+                            ?.copyWith(color: context.appPalette.mutedText),
                       ),
                     ],
                   ],

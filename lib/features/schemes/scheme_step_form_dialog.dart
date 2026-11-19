@@ -105,8 +105,8 @@ class _SchemeStepFormDialogState extends State<SchemeStepFormDialog> {
       FilledButton(
         onPressed: _isSaving ? null : _save,
         style: FilledButton.styleFrom(
-          backgroundColor: AppTheme.accent,
-          foregroundColor: const Color(0xFF201B12),
+          backgroundColor: context.appPalette.accent,
+          foregroundColor: context.appPalette.onAccent,
         ),
         child: _isSaving
             ? const SizedBox(
@@ -122,7 +122,7 @@ class _SchemeStepFormDialogState extends State<SchemeStepFormDialog> {
   InputDecoration _decoration(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppTheme.surface,
+    fillColor: context.appPalette.surface,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide.none,

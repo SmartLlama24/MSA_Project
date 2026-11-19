@@ -157,8 +157,8 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
                 onPressed: () => _openForm(),
                 icon: const Icon(Icons.add),
                 style: IconButton.styleFrom(
-                  foregroundColor: AppTheme.accent,
-                  backgroundColor: AppTheme.surface,
+                  foregroundColor: context.appPalette.accent,
+                  backgroundColor: context.appPalette.surface,
                 ),
               ),
             ],
@@ -171,8 +171,8 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
 
   Widget _content() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppTheme.accent),
+      return Center(
+        child: CircularProgressIndicator(color: context.appPalette.accent),
       );
     }
     if (_error != null) {
@@ -204,9 +204,9 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.palette_outlined,
-                    color: AppTheme.accent,
+                    color: context.appPalette.accent,
                     size: 44,
                   ),
                   const SizedBox(height: 12),
@@ -225,8 +225,8 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
                     icon: const Icon(Icons.add),
                     label: const Text('Create scheme'),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.accent,
-                      foregroundColor: const Color(0xFF201B12),
+                      backgroundColor: context.appPalette.accent,
+                      foregroundColor: context.appPalette.onAccent,
                     ),
                   ),
                 ],
@@ -239,7 +239,7 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: AppTheme.accent,
+      color: context.appPalette.accent,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
         itemCount: _schemes.length,
@@ -291,7 +291,7 @@ class _SchemeRecipeCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Material(
-        color: AppTheme.surface,
+        color: context.appPalette.surface,
         borderRadius: BorderRadius.circular(13),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -299,7 +299,7 @@ class _SchemeRecipeCard extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: AppTheme.subtleBorder),
+              border: Border.all(color: context.appPalette.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,22 +400,22 @@ class _SchemeRecipeCard extends StatelessWidget {
                       Icon(
                         Icons.format_list_numbered,
                         size: 15,
-                        color: AppTheme.accent,
+                        color: context.appPalette.accent,
                       ),
                       const SizedBox(width: 5),
                       Text(
                         '$stepCount steps',
-                        style: const TextStyle(
-                          color: AppTheme.primaryText,
+                        style: TextStyle(
+                          color: context.appPalette.primaryText,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Icon(
+                      Icon(
                         Icons.color_lens_outlined,
                         size: 15,
-                        color: AppTheme.mutedText,
+                        color: context.appPalette.mutedText,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -426,8 +426,8 @@ class _SchemeRecipeCard extends StatelessWidget {
                                     '${wantedCount == 0 ? '' : ' · $wantedCount wanted'}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: AppTheme.mutedText,
+                          style: TextStyle(
+                            color: context.appPalette.mutedText,
                             fontSize: 11,
                           ),
                         ),
@@ -450,16 +450,23 @@ class _SchemePlaceholder extends StatelessWidget {
   const _SchemePlaceholder();
 
   @override
-  Widget build(BuildContext context) => const DecoratedBox(
+  Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFF39352D), Color(0xFF242321)],
+        colors: [
+          context.appPalette.elevatedSurface,
+          context.appPalette.surface,
+        ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
     ),
     child: Center(
-      child: Icon(Icons.palette_outlined, color: AppTheme.accent, size: 42),
+      child: Icon(
+        Icons.palette_outlined,
+        color: context.appPalette.accent,
+        size: 42,
+      ),
     ),
   );
 }
@@ -480,9 +487,9 @@ class _PaintSwatchRow extends StatelessWidget {
             width: 15,
             height: 15,
             decoration: BoxDecoration(
-              color: paint.color ?? AppTheme.elevatedSurface,
+              color: paint.color ?? context.appPalette.elevatedSurface,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+              border: Border.all(color: context.appPalette.border),
             ),
           ),
         ),

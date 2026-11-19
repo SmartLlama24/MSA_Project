@@ -22,8 +22,8 @@ class PaintingStepPaints extends StatelessWidget {
           Expanded(
             child: Text(
               paints.isEmpty ? 'No paints associated' : 'Paints',
-              style: const TextStyle(
-                color: AppTheme.mutedText,
+              style: TextStyle(
+                color: context.appPalette.mutedText,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -85,9 +85,9 @@ class _PaintSwatch extends StatelessWidget {
     width: 30,
     height: 30,
     decoration: BoxDecoration(
-      color: paint.color ?? AppTheme.elevatedSurface,
+      color: paint.color ?? context.appPalette.elevatedSurface,
       shape: BoxShape.circle,
-      border: Border.all(color: Colors.white24),
+      border: Border.all(color: context.appPalette.border),
     ),
     child: paint.color == null
         ? const Icon(Icons.palette_outlined, size: 16)

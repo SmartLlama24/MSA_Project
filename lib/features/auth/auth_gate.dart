@@ -7,7 +7,14 @@ import 'auth_screen.dart';
 import 'auth_service.dart';
 
 class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
+  const AuthGate({
+    super.key,
+    required this.selectedTheme,
+    required this.onThemeChanged,
+  });
+
+  final PaintbenchTheme selectedTheme;
+  final Future<void> Function(PaintbenchTheme theme) onThemeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -22,9 +29,11 @@ class AuthGate extends StatelessWidget {
       ),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: CircularProgressIndicator(color: AppTheme.accent),
+              child: CircularProgressIndicator(
+                color: context.appPalette.accent,
+              ),
             ),
           );
         }
@@ -37,6 +46,8 @@ class AuthGate extends StatelessWidget {
         return AppNavigation(
           email: session.user.email ?? '',
           onLogout: authService.signOut,
+          selectedTheme: selectedTheme,
+          onThemeChanged: onThemeChanged,
         );
       },
     );

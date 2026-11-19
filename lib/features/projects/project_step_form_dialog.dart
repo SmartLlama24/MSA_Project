@@ -76,9 +76,9 @@ class _ProjectStepFormDialogState extends State<ProjectStepFormDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (!_isEditing) ...[
-                  const Text(
+                  Text(
                     'New steps are added to the end. Reorder them from the step list.',
-                    style: TextStyle(color: AppTheme.mutedText),
+                    style: TextStyle(color: context.appPalette.mutedText),
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -124,16 +124,16 @@ class _ProjectStepFormDialogState extends State<ProjectStepFormDialog> {
         FilledButton(
           onPressed: _isSaving ? null : _save,
           style: FilledButton.styleFrom(
-            backgroundColor: AppTheme.accent,
-            foregroundColor: const Color(0xFF201B12),
+            backgroundColor: context.appPalette.accent,
+            foregroundColor: context.appPalette.onAccent,
           ),
           child: _isSaving
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF201B12),
+                    color: context.appPalette.onAccent,
                   ),
                 )
               : Text(_isEditing ? 'Save changes' : 'Add step'),
@@ -145,7 +145,7 @@ class _ProjectStepFormDialogState extends State<ProjectStepFormDialog> {
   InputDecoration _decoration(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppTheme.surface,
+    fillColor: context.appPalette.surface,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide.none,

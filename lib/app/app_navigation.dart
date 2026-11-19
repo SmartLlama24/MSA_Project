@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'app_theme.dart';
 import '../data/models.dart';
 import '../features/home/home_screen.dart';
 import '../features/paints/paints_screen.dart';
@@ -23,6 +24,8 @@ class AppNavigation extends StatefulWidget {
     this.photoRepository,
     this.schemeRepository,
     this.schemePreviewPicker,
+    this.selectedTheme = PaintbenchTheme.darkGold,
+    this.onThemeChanged,
   });
 
   final String email;
@@ -32,6 +35,8 @@ class AppNavigation extends StatefulWidget {
   final ProjectPhotoRepository? photoRepository;
   final PaintingSchemeRepository? schemeRepository;
   final SchemePreviewPicker? schemePreviewPicker;
+  final PaintbenchTheme selectedTheme;
+  final Future<void> Function(PaintbenchTheme theme)? onThemeChanged;
 
   @override
   State<AppNavigation> createState() => _AppNavigationState();
@@ -115,7 +120,12 @@ class _AppNavigationState extends State<AppNavigation> {
         paintRepository: _paintRepository,
         previewPicker: _schemePreviewPicker,
       ),
-      ProfileScreen(email: widget.email, onLogout: widget.onLogout),
+      ProfileScreen(
+        email: widget.email,
+        onLogout: widget.onLogout,
+        selectedTheme: widget.selectedTheme,
+        onThemeChanged: widget.onThemeChanged ?? (_) async {},
+      ),
     ];
 
     return Scaffold(

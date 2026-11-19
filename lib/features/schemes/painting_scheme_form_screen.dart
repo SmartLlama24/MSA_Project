@@ -175,8 +175,8 @@ class _PaintingSchemeFormScreenState extends State<PaintingSchemeFormScreen> {
           FilledButton(
             onPressed: _isSaving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              foregroundColor: const Color(0xFF201B12),
+              backgroundColor: context.appPalette.accent,
+              foregroundColor: context.appPalette.onAccent,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             child: _isSaving
@@ -222,7 +222,7 @@ class _PaintingSchemeFormScreenState extends State<PaintingSchemeFormScreen> {
       );
     }
     return _imageBox(
-      const Icon(Icons.palette_outlined, color: AppTheme.accent, size: 42),
+      Icon(Icons.palette_outlined, color: context.appPalette.accent, size: 42),
     );
   }
 
@@ -230,7 +230,7 @@ class _PaintingSchemeFormScreenState extends State<PaintingSchemeFormScreen> {
     height: 190,
     clipBehavior: Clip.antiAlias,
     decoration: BoxDecoration(
-      color: AppTheme.surface,
+      color: context.appPalette.surface,
       borderRadius: BorderRadius.circular(20),
     ),
     child: Center(child: child),
@@ -239,7 +239,7 @@ class _PaintingSchemeFormScreenState extends State<PaintingSchemeFormScreen> {
   InputDecoration _decoration(String label) => InputDecoration(
     labelText: label,
     filled: true,
-    fillColor: AppTheme.surface,
+    fillColor: context.appPalette.surface,
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide.none,

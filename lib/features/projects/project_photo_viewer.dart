@@ -24,8 +24,10 @@ class ProjectPhotoViewer extends StatelessWidget {
           fit: BoxFit.contain,
           loadingBuilder: (context, child, progress) {
             if (progress == null) return child;
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.accent),
+            return Center(
+              child: CircularProgressIndicator(
+                color: context.appPalette.accent,
+              ),
             );
           },
           errorBuilder: (context, error, stackTrace) {
@@ -33,9 +35,9 @@ class ProjectPhotoViewer extends StatelessWidget {
               '[ProjectPhoto] Full-screen image load failed: '
               'photo=${photo.id}, error=$error\n$stackTrace',
             );
-            return const Icon(
+            return Icon(
               Icons.broken_image_outlined,
-              color: AppTheme.mutedText,
+              color: context.appPalette.mutedText,
               size: 56,
             );
           },
