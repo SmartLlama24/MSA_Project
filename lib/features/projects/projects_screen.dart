@@ -357,104 +357,172 @@ class _ProjectCard extends StatelessWidget {
       ProjectStatus.planned => 'PLANNED',
       ProjectStatus.completed => 'COMPLETED',
     };
-    final progressLabel =
-        '${project.completedStepCount}/${project.totalStepCount}';
     final stepProgress = project.totalStepCount == 0
         ? 0.0
         : project.completedStepCount / project.totalStepCount;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: project.colors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: coverPhotoUrl == null
-                      ? Icon(project.icon, color: Colors.white, size: 30)
-                      : Image.network(
-                          coverPhotoUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Icon(project.icon, color: Colors.white, size: 30),
+    return Material(
+      color: AppTheme.surface,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.subtleBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 154,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: project.colors,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        project.name,
-                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 5),
-                      Text(
-                        project.subject,
-                        style: Theme.of(context).textTheme.bodySmall,
+                      child: coverPhotoUrl == null
+                          ? Center(
+                              child: Icon(
+                                project.icon,
+                                size: 54,
+                                color: Colors.white.withValues(alpha: 0.82),
+                              ),
+                            )
+                          : Image.network(
+                              coverPhotoUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Center(
+                                    child: Icon(
+                                      project.icon,
+                                      size: 54,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.82,
+                                      ),
+                                    ),
+                                  ),
+                            ),
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.62),
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  tooltip: 'Project actions',
-                  icon: const Icon(Icons.more_horiz, color: AppTheme.mutedText),
-                  onSelected: (action) {
-                    if (action == 'edit') onEdit();
-                    if (action == 'delete') onDelete();
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    ),
+                    Positioned(
+                      left: 14,
+                      bottom: 13,
+                      right: 56,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            project.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(color: Colors.white, fontSize: 19),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            project.subject,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFE6E2DB),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Material(
+                        color: Colors.black.withValues(alpha: 0.36),
+                        shape: const CircleBorder(),
+                        child: PopupMenuButton<String>(
+                          tooltip: 'Project actions',
+                          icon: const Icon(
+                            Icons.more_horiz,
+                            color: Colors.white,
+                          ),
+                          onSelected: (action) {
+                            if (action == 'edit') onEdit();
+                            if (action == 'delete') onDelete();
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _StatusLabel(status: status),
-                Text(
-                  progressLabel,
-                  style: const TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 9),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: stepProgress,
-                minHeight: 6,
-                backgroundColor: AppTheme.elevatedSurface,
-                color: AppTheme.accent,
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        _StatusLabel(status: status),
+                        const Spacer(),
+                        Text(
+                          '${(stepProgress * 100).round()}%',
+                          style: const TextStyle(
+                            color: AppTheme.accent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${project.completedStepCount}/${project.totalStepCount}',
+                          style: const TextStyle(
+                            color: AppTheme.mutedText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: stepProgress,
+                        minHeight: 5,
+                        backgroundColor: AppTheme.elevatedSurface,
+                        color: AppTheme.accent,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -469,10 +537,10 @@ class _StatusLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: AppTheme.elevatedSurface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
         status,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
+import '../../widgets/painting_step_paints.dart';
 import '../paints/paint_repository.dart';
 import '../projects/step_paint_picker_dialog.dart';
 import 'painting_scheme_repository.dart';
@@ -355,55 +356,9 @@ class _SchemeStepCard extends StatelessWidget {
             Text(step.description),
           ],
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  step.paints.isEmpty ? 'No paints associated' : 'Paints',
-                  style: const TextStyle(
-                    color: AppTheme.mutedText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: onEditPaints,
-                icon: const Icon(Icons.palette_outlined, size: 18),
-                label: Text(step.paints.isEmpty ? 'Add paints' : 'Edit paints'),
-              ),
-            ],
-          ),
-          for (final paint in step.paints)
-            ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: _paintSwatch(paint),
-              title: Text(paint.name),
-              subtitle: Text(paint.brandName ?? 'Unknown brand'),
-              trailing: Text(
-                switch (paint.userStatus) {
-                  PaintOwnershipStatus.owned => 'Owned',
-                  PaintOwnershipStatus.wanted => 'Wanted',
-                  PaintOwnershipStatus.unowned => 'Neither',
-                },
-                style: const TextStyle(color: AppTheme.mutedText, fontSize: 12),
-              ),
-            ),
+          PaintingStepPaints(paints: step.paints, onEdit: onEditPaints),
         ],
       ),
     ),
-  );
-
-  Widget _paintSwatch(CatalogPaint paint) => Container(
-    width: 30,
-    height: 30,
-    decoration: BoxDecoration(
-      color: paint.color ?? AppTheme.elevatedSurface,
-      shape: BoxShape.circle,
-      border: Border.all(color: Colors.white24),
-    ),
-    child: paint.color == null
-        ? const Icon(Icons.palette_outlined, size: 16)
-        : null,
   );
 }

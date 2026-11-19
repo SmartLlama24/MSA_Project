@@ -125,28 +125,28 @@ class _AppNavigationState extends State<AppNavigation> {
         onDestinationSelected: _selectTab,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: Icon(Icons.home_outlined, size: 24),
+            selectedIcon: Icon(Icons.home, size: 25),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.view_kanban_outlined),
-            selectedIcon: Icon(Icons.view_kanban),
+            icon: Icon(Icons.view_kanban_outlined, size: 24),
+            selectedIcon: Icon(Icons.view_kanban, size: 25),
             label: 'Projects',
           ),
           NavigationDestination(
-            icon: Icon(Icons.palette_outlined),
-            selectedIcon: Icon(Icons.palette),
+            icon: Icon(Icons.palette_outlined, size: 24),
+            selectedIcon: Icon(Icons.palette, size: 25),
             label: 'Paints',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome),
+            icon: Icon(Icons.auto_awesome_outlined, size: 24),
+            selectedIcon: Icon(Icons.auto_awesome, size: 25),
             label: 'Schemes',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: Icon(Icons.person_outline, size: 24),
+            selectedIcon: Icon(Icons.person, size: 25),
             label: 'Profile',
           ),
         ],

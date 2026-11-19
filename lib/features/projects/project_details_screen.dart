@@ -3,13 +3,14 @@ import 'package:flutter/services.dart';
 
 import '../../app/app_theme.dart';
 import '../../data/models.dart';
+import '../../widgets/painting_step_paints.dart';
 import '../paints/paint_repository.dart';
 import 'project_form_dialog.dart';
 import 'project_photo_repository.dart';
 import 'project_photo_viewer.dart';
 import 'project_repository.dart';
-import 'step_paint_picker_dialog.dart';
 import 'project_step_form_dialog.dart';
+import 'step_paint_picker_dialog.dart';
 
 class ProjectDetailsScreen extends StatefulWidget {
   const ProjectDetailsScreen({
@@ -937,8 +938,8 @@ class _StepPhotoPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
     child: ClipRRect(
       borderRadius: BorderRadius.circular(10),
       child: Stack(
@@ -967,18 +968,20 @@ class _StepPhotoPreview extends StatelessWidget {
             ),
           ),
           Positioned(
-            top: -8,
-            right: -8,
+            top: 0,
+            right: 0,
             child: IconButton(
               tooltip: 'Delete progress photo',
               onPressed: onDelete,
               visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 20, height: 20),
               style: IconButton.styleFrom(
                 backgroundColor: Colors.black54,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(26, 26),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              icon: const Icon(Icons.close, size: 14),
+              icon: const Icon(Icons.close, size: 12),
             ),
           ),
         ],
@@ -1022,150 +1025,208 @@ class _StepCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
     key: key,
-    margin: const EdgeInsets.only(bottom: 12),
+    margin: const EdgeInsets.only(bottom: 8),
     color: AppTheme.surface,
     child: Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Checkbox(
-                value: step.isCompleted,
-                onChanged: isUpdating
-                    ? null
-                    : (value) {
-                        if (value != null) onToggleCompleted(value);
-                      },
-                visualDensity: VisualDensity.compact,
-              ),
               ReorderableDragStartListener(
                 index: stepNumber - 1,
                 enabled: canReorder,
-                child: const Icon(Icons.drag_handle, color: AppTheme.mutedText),
+                child: const Icon(
+                  Icons.drag_handle,
+                  color: AppTheme.mutedText,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 8),
-              CircleAvatar(
-                radius: 15,
-                backgroundColor: AppTheme.elevatedSurface,
-                child: Text('$stepNumber'),
+              const SizedBox(width: 6),
+              Container(
+                width: 26,
+                height: 26,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppTheme.accent.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Text(
+                  '$stepNumber',
+                  style: const TextStyle(
+                    color: AppTheme.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 9),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      step.title,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    if (step.instructions.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(step.instructions),
-                    ],
-                  ],
+                child: Text(
+                  step.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: step.isCompleted
+                    ? 'Mark step incomplete'
+                    : 'Mark step complete',
+                child: SizedBox(
+                  width: 38,
+                  height: 38,
+                  child: Checkbox(
+                    value: step.isCompleted,
+                    onChanged: isUpdating
+                        ? null
+                        : (value) {
+                            if (value != null) onToggleCompleted(value);
+                          },
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
               ),
               PopupMenuButton<String>(
                 tooltip: 'Step actions',
+                iconSize: 20,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 42, minHeight: 42),
                 onSelected: (action) {
+                  if (action == 'photo') {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => onAddPhoto(),
+                    );
+                  }
                   if (action == 'edit') onEdit();
                   if (action == 'delete') onDelete();
                 },
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Edit')),
-                  PopupMenuItem(value: 'delete', child: Text('Delete')),
-                ],
-              ),
-            ],
-          ),
-          if (photos.isNotEmpty || isUploadingPhotos)
-            SizedBox(
-              height: 64,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final photo in photos)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _StepPhotoPreview(
-                        photo: photo,
-                        onTap: () => onPhotoTap(photo),
-                        onDelete: () => onPhotoDelete(photo),
-                      ),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'photo',
+                    enabled: !isUploadingPhotos,
+                    child: Text(
+                      isUploadingPhotos
+                          ? 'Uploading progress photo'
+                          : 'Add progress photo',
                     ),
-                  if (isUploadingPhotos)
-                    const SizedBox(
-                      width: 56,
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: AppTheme.accent,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    )
-                  else
-                    TextButton.icon(
-                      onPressed: onAddPhoto,
-                      icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                      label: const Text('Add photo'),
-                    ),
-                ],
-              ),
-            )
-          else
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onAddPhoto,
-                icon: const Icon(Icons.add_a_photo_outlined, size: 18),
-                label: const Text('Add progress photo'),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  step.paints.isEmpty ? 'No paints associated' : 'Paints',
-                  style: const TextStyle(
-                    color: AppTheme.mutedText,
-                    fontWeight: FontWeight.w600,
                   ),
-                ),
-              ),
-              TextButton.icon(
-                onPressed: onManagePaints,
-                icon: const Icon(Icons.palette_outlined, size: 18),
-                label: Text(step.paints.isEmpty ? 'Add paints' : 'Edit paints'),
+                  const PopupMenuItem(value: 'edit', child: Text('Edit step')),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Text('Delete step'),
+                  ),
+                ],
               ),
             ],
           ),
-          for (final paint in step.paints)
-            ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: _paintSwatch(paint),
-              title: Text(paint.name),
-              subtitle: Text(paint.brandName ?? 'Unknown brand'),
+          if (step.instructions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 41, top: 4),
+              child: Text(
+                step.instructions,
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppTheme.mutedText, height: 1.35),
+              ),
             ),
+          if (photos.isNotEmpty || isUploadingPhotos)
+            Padding(
+              padding: EdgeInsets.only(
+                left: 41,
+                top: step.instructions.isEmpty ? 8 : 6,
+              ),
+              child: photos.isEmpty
+                  ? const Row(
+                      children: [
+                        Icon(
+                          Icons.photo_camera_outlined,
+                          size: 16,
+                          color: AppTheme.mutedText,
+                        ),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Adding progress photo',
+                            style: TextStyle(
+                              color: AppTheme.mutedText,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            color: AppTheme.accent,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      ],
+                    )
+                  : SizedBox(
+                      height: 44,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.photo_camera_outlined,
+                            size: 16,
+                            color: AppTheme.mutedText,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${photos.length}',
+                            style: const TextStyle(
+                              color: AppTheme.mutedText,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                for (final photo in photos)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 6),
+                                    child: _StepPhotoPreview(
+                                      photo: photo,
+                                      onTap: () => onPhotoTap(photo),
+                                      onDelete: () => onPhotoDelete(photo),
+                                    ),
+                                  ),
+                                if (isUploadingPhotos)
+                                  const SizedBox(
+                                    width: 40,
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppTheme.accent,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Divider(height: 1),
+          ),
+          PaintingStepPaints(paints: step.paints, onEdit: onManagePaints),
         ],
       ),
     ),
-  );
-
-  Widget _paintSwatch(CatalogPaint paint) => Container(
-    width: 30,
-    height: 30,
-    decoration: BoxDecoration(
-      color: paint.color ?? AppTheme.elevatedSurface,
-      shape: BoxShape.circle,
-      border: Border.all(color: Colors.white24),
-    ),
-    child: paint.color == null
-        ? const Icon(Icons.palette_outlined, size: 16)
-        : null,
   );
 }

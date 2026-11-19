@@ -261,7 +261,7 @@ void main() {
     },
   );
 
-  testWidgets('scheme details show paint ownership status', (
+  testWidgets('scheme details show paint ownership icons', (
     WidgetTester tester,
   ) async {
     final paint = _testPaint('paint-1', 'Forest Green', '#24552D');
@@ -299,9 +299,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Owned'), findsOneWidget);
-    expect(find.text('Wanted'), findsOneWidget);
-    expect(find.text('Neither'), findsOneWidget);
+    expect(find.byTooltip('Owned'), findsOneWidget);
+    expect(find.byTooltip('Wanted'), findsOneWidget);
+    expect(find.byTooltip('Unowned'), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+    expect(find.byIcon(Icons.bookmark), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.text('Neither'), findsNothing);
   });
 
   testWidgets('new scheme steps append after existing steps', (
@@ -463,7 +467,7 @@ void main() {
     expect(find.text('The Gilded Wyrm'), findsNothing);
     expect(find.text('2/5'), findsOneWidget);
     expect(find.text('0/0'), findsOneWidget);
-    expect(find.textContaining('%'), findsNothing);
+    expect(find.text('40% complete'), findsOneWidget);
     final recentProgressBars = tester
         .widgetList<LinearProgressIndicator>(
           find.byType(LinearProgressIndicator),
@@ -944,7 +948,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Step actions').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Edit'));
+    await tester.tap(find.text('Edit step'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextFormField).at(0),
@@ -956,7 +960,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Step actions').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Delete').last);
+    await tester.tap(find.text('Delete step'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete').last);
     await tester.pumpAndSettle();
@@ -1067,7 +1071,9 @@ void main() {
 
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -900));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Add progress photo'));
+    await tester.ensureVisible(find.byTooltip('Step actions').first);
+    await tester.tap(find.byTooltip('Step actions').first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Add progress photo'));
     await tester.pumpAndSettle();
     await chooseGallery();
@@ -1080,6 +1086,8 @@ void main() {
       isFalse,
     );
 
+    await tester.ensureVisible(find.text('Prime armor'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.broken_image_outlined).last);
     await tester.pumpAndSettle();
     expect(find.byType(InteractiveViewer), findsOneWidget);
@@ -1258,6 +1266,7 @@ void main() {
     );
     expect(find.text('Mephiston Red'), findsOneWidget);
     expect(find.text('Citadel'), findsOneWidget);
+    expect(find.byTooltip('Unowned'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox());
     await pumpDetails();

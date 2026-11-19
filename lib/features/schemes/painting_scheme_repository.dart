@@ -98,14 +98,23 @@ class SupabasePaintingSchemeRepository implements PaintingSchemeRepository {
     final schemes = rows.map(PaintingScheme.fromMap).toList();
     final schemeIds = schemes.map((scheme) => scheme.id).toList();
     final counts = <String, int>{};
+    final stepsByScheme = <String, List<PaintingSchemeStep>>{};
     if (schemeIds.isNotEmpty) {
       final stepRows = await _client
           .from('painting_scheme_steps')
-          .select('scheme_id')
+          .select(
+            'id, scheme_id, step_order, title, description, '
+            'painting_scheme_step_paints(paints(id, name, paint_type, '
+            'hex_color, paint_brands(name)))',
+          )
           .inFilter('scheme_id', schemeIds);
+      final steps = await _loadStepPaintStatuses(stepRows);
       for (final row in stepRows) {
         final id = row['scheme_id'] as String;
         counts.update(id, (count) => count + 1, ifAbsent: () => 1);
+      }
+      for (final step in steps) {
+        stepsByScheme.putIfAbsent(step.schemeId, () => []).add(step);
       }
     }
 
@@ -123,6 +132,7 @@ class SupabasePaintingSchemeRepository implements PaintingSchemeRepository {
           description: scheme.description,
           previewStoragePath: scheme.previewStoragePath,
           previewUrl: previewUrl,
+          steps: stepsByScheme[scheme.id] ?? const [],
           stepCount: counts[scheme.id] ?? 0,
         );
       }),

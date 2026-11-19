@@ -332,32 +332,51 @@ class _PaintTile extends StatelessWidget {
       if (hex != null && parsePaintColor(hex) != null) hex.toUpperCase(),
     ];
 
+    final statusColor = switch (paint.userStatus) {
+      PaintOwnershipStatus.owned => AppTheme.accent,
+      PaintOwnershipStatus.wanted => const Color(0xFFB7A58B),
+      PaintOwnershipStatus.unowned => AppTheme.mutedText,
+    };
+
     return Material(
       color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.subtleBorder),
           ),
           child: Row(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
                   color: color ?? AppTheme.elevatedSurface,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.12),
+                    color: Colors.white.withValues(alpha: 0.16),
+                  ),
+                ),
+                alignment: Alignment.bottomRight,
+                child: Container(
+                  width: 15,
+                  height: 15,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(7),
+                      bottomRight: Radius.circular(7),
+                    ),
+                    border: Border.all(color: AppTheme.surface, width: 2),
                   ),
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -377,16 +396,24 @@ class _PaintTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                statusLabel,
-                style: TextStyle(
-                  color: paint.userStatus == PaintOwnershipStatus.unowned
-                      ? AppTheme.mutedText
-                      : AppTheme.accent,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.5,
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: statusColor.withValues(alpha: 0.32),
+                  ),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.35,
+                  ),
                 ),
               ),
             ],

@@ -245,93 +245,247 @@ class _PaintingSchemesScreenState extends State<PaintingSchemesScreen> {
         itemCount: _schemes.length,
         itemBuilder: (context, index) {
           final scheme = _schemes[index];
-          return Card(
-            color: AppTheme.surface,
-            margin: const EdgeInsets.only(bottom: 12),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => _openDetails(scheme),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 100,
-                    height: 110,
-                    child: scheme.previewUrl == null
-                        ? const ColoredBox(
-                            color: AppTheme.elevatedSurface,
-                            child: Icon(
-                              Icons.palette_outlined,
-                              color: AppTheme.accent,
-                            ),
-                          )
-                        : Image.network(
-                            scheme.previewUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const ColoredBox(
-                              color: AppTheme.elevatedSurface,
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                color: AppTheme.mutedText,
-                              ),
-                            ),
-                          ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            scheme.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          if (scheme.description?.isNotEmpty == true) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              scheme.description!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppTheme.mutedText),
-                            ),
-                          ],
-                          const SizedBox(height: 7),
-                          Text(
-                            '${scheme.stepCount ?? scheme.steps.length} steps',
-                            style: const TextStyle(
-                              color: AppTheme.accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    tooltip: 'Scheme actions',
-                    onSelected: (action) {
-                      if (action == 'edit') _openForm(scheme);
-                      if (action == 'duplicate') _duplicate(scheme);
-                      if (action == 'delete') _delete(scheme);
-                    },
-                    itemBuilder: (context) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(
-                        value: 'duplicate',
-                        child: Text('Duplicate'),
-                      ),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+          return _SchemeRecipeCard(
+            scheme: scheme,
+            onTap: () => _openDetails(scheme),
+            onEdit: () => _openForm(scheme),
+            onDuplicate: () => _duplicate(scheme),
+            onDelete: () => _delete(scheme),
           );
         },
       ),
     );
   }
+}
+
+class _SchemeRecipeCard extends StatelessWidget {
+  const _SchemeRecipeCard({
+    required this.scheme,
+    required this.onTap,
+    required this.onEdit,
+    required this.onDuplicate,
+    required this.onDelete,
+  });
+
+  final PaintingScheme scheme;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+  final VoidCallback onDuplicate;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final paints = {
+      for (final paint in scheme.steps.expand((step) => step.paints))
+        paint.id: paint,
+    }.values.toList();
+    final ownedCount = paints
+        .where((paint) => paint.userStatus == PaintOwnershipStatus.owned)
+        .length;
+    final wantedCount = paints
+        .where((paint) => paint.userStatus == PaintOwnershipStatus.wanted)
+        .length;
+    final stepCount = scheme.stepCount ?? scheme.steps.length;
+    final photoUrl = scheme.previewUrl;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Material(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(13),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: AppTheme.subtleBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  height: 142,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (photoUrl == null)
+                        const _SchemePlaceholder()
+                      else
+                        Image.network(
+                          photoUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const _SchemePlaceholder(),
+                        ),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.1),
+                              Colors.black.withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 14,
+                        right: 56,
+                        bottom: 13,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              scheme.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: Colors.white),
+                            ),
+                            if (scheme.description?.isNotEmpty == true) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                scheme.description!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFFE6E2DB),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Material(
+                          color: Colors.black.withValues(alpha: 0.36),
+                          shape: const CircleBorder(),
+                          child: PopupMenuButton<String>(
+                            tooltip: 'Scheme actions',
+                            icon: const Icon(
+                              Icons.more_horiz,
+                              color: Colors.white,
+                            ),
+                            onSelected: (action) {
+                              if (action == 'edit') onEdit();
+                              if (action == 'duplicate') onDuplicate();
+                              if (action == 'delete') onDelete();
+                            },
+                            itemBuilder: (context) => const [
+                              PopupMenuItem(value: 'edit', child: Text('Edit')),
+                              PopupMenuItem(
+                                value: 'duplicate',
+                                child: Text('Duplicate'),
+                              ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.format_list_numbered,
+                        size: 15,
+                        color: AppTheme.accent,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '$stepCount steps',
+                        style: const TextStyle(
+                          color: AppTheme.primaryText,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(
+                        Icons.color_lens_outlined,
+                        size: 15,
+                        color: AppTheme.mutedText,
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          paints.isEmpty
+                              ? 'No paints added'
+                              : '$ownedCount/${paints.length} owned'
+                                    '${wantedCount == 0 ? '' : ' · $wantedCount wanted'}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppTheme.mutedText,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      if (paints.isNotEmpty)
+                        _PaintSwatchRow(paints: paints.take(6).toList()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SchemePlaceholder extends StatelessWidget {
+  const _SchemePlaceholder();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF39352D), Color(0xFF242321)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: Center(
+      child: Icon(Icons.palette_outlined, color: AppTheme.accent, size: 42),
+    ),
+  );
+}
+
+class _PaintSwatchRow extends StatelessWidget {
+  const _PaintSwatchRow({required this.paints});
+
+  final List<CatalogPaint> paints;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (final paint in paints)
+        Padding(
+          padding: const EdgeInsets.only(left: 4),
+          child: Container(
+            width: 15,
+            height: 15,
+            decoration: BoxDecoration(
+              color: paint.color ?? AppTheme.elevatedSurface,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
+            ),
+          ),
+        ),
+    ],
+  );
 }
